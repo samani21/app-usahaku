@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
+@plugin "@tailwindcss/typography";
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --primary-color: #10B981;
+  --secondary-color: #424242;
+  --dark-bg: #0f172a;
 }
 
 @theme inline {
@@ -20,7 +25,196 @@
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--foreground);
+  color: var(--background);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+
+.inter {
+  font-family: "Inter", sans-serif;
+  font-optical-sizing: auto;
+  font-style: normal;
+}
+
+.hero-bg {
+  background-color: #f7f7f7;
+  background-image: radial-gradient(#d1d5db 0.5px, transparent 0.5px);
+  background-size: 10px 10px;
+}
+
+.sidebar-active {
+  background-color: #10B981;
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 233, 78, 0.1), 0 2px 4px -2px rgba(15, 167, 10, 0.06);
+}
+
+.sidebar-active svg {
+  color: white;
+}
+
+.chart-bar-container {
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 2px;
+}
+
+.chart-bar {
+  width: 16px;
+  margin-right: 8px;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.3s ease-in-out;
+}
+
+.chart-bar-expense {
+  background-color: #ec4899;
+  /* Pink-500 */
+}
+
+.chart-bar-income {
+  background-color: #8b5cf6;
+  /* Violet-500 */
+}
+
+.wallet-card {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.5), 0 4px 6px -4px rgba(37, 99, 235, 0.5);
+}
+
+/* ==== Scrollbar Tipis & Halus ==== */
+.thin-scroll::-webkit-scrollbar {
+  width: 6px;
+  /* Lebar scrollbar */
+}
+
+.thin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  /* Latar belakang track */
+}
+
+.thin-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  /* Warna scroll */
+  border-radius: 4px;
+  /* Membulatkan ujung */
+}
+
+.thin-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.35);
+  /* Saat hover */
+}
+
+/* Untuk Firefox */
+.thin-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+/* ==== Hilangkan scrollbar tapi tetap bisa scroll ==== */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+  /* Chrome, Safari, Edge */
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  /* Internet Explorer dan Edge lama */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.calendar-scale .flatpickr-calendar {
+  transform: scale(0.8);
+  /* kecilkan 80% */
+  transform-origin: top left;
+}
+
+.calendar-scale .flatpickr-days {
+  width: auto !important;
+}
+
+.calendar-scale {
+  width: 240px;
+  /* sesuaikan sendiri */
+}
+
+.modal-no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.modal-no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.leaflet-control-geosearch {
+  z-index: 1000 !important;
+  margin-top: 10px;
+}
+
+.leaflet-control-geosearch input {
+  width: 250px !important;
+  height: 32px !important;
+  font-size: 14px !important;
+  padding: 4px 8px !important;
+}
+
+.leaflet-control-geosearch form {
+  background: white !important;
+  border: 1px solid #ccc !important;
+  padding: 3px !important;
+  border-radius: 4px !important;
+}
+
+.leaflet-control-geosearch input {
+  background: white !important;
+  border: 1px solid #ccc !important;
+}
+
+
+button {
+  cursor: pointer;
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Menghilangkan panah di Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.3);
+  border-radius: 10px;
+}
+
+@import "leaflet/dist/leaflet.css";
+
+/* 🔥 sembunyikan panel routing jelek */
+.leaflet-routing-container {
+  display: none !important;
+}
+
+
+/* Hilangkan default box styles milik Leaflet tooltip */
+.leaflet-tooltip.custom-clean-tooltip {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* Hilangkan segitiga panah kecil bawaan leaflet di bawah text */
+.leaflet-tooltip-top.custom-clean-tooltip::before {
+  border-top-color: transparent !important;
 }
