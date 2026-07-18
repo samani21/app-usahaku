@@ -1,12 +1,13 @@
 "use client";
 import { Bell, ChevronDown, LogOut, Menu, Settings, User, X, Check, Crown, Sparkles, Zap, ShieldCheck, AlertCircle, Store } from 'lucide-react'
-import React, { Dispatch, SetStateAction, useState, useEffect } from 'react'
+import React, { Dispatch, SetStateAction, useState, useEffect, useRef } from 'react'
 import GlassCard from './GlassCard';
 import { usePathname } from 'next/navigation';
-import { menuSidebar } from '@/lib/MenuSidebar';
+// import { menuSidebar } from '@/lib/MenuSidebar'; // Boleh dihapus jika tidak dipakai di Header
 import { Get } from '@/utils/Get';
 import ModalSubscription from './ModalSubscription';
 import { formatImage } from '@/utils/formatImage';
+import { User as UserType, Business as BusinessType } from '@/types'; // Gunakan tipe data jika sudah dibuat
 
 type Props = {
   setIsSidebarOpen: Dispatch<SetStateAction<boolean>>;
@@ -18,26 +19,61 @@ type Props = {
   handleProfileClick: () => void;
   title: string;
   handleLogout: () => void;
-  user: any
-  business: any
+  user: UserType | any; // Lebih baik gunakan tipe data spesifik
+  business: BusinessType | any;
+  // REFACTOR: Gunakan tipe RefObject dari React, jangan 'any'
+  mobileMenuRef: React.RefObject<HTMLDivElement | null>;
+  mobileBtnRef: React.RefObject<HTMLButtonElement | null>;
 }
 
-const Header = ({ setIsSidebarOpen, user, business, isSidebarOpen, setIsMobileActionMenuOpen, handleNotificationClick, handleProfileClick, isMobileActionMenuOpen, closeMobileActionMenu, title, handleLogout }: Props) => {
+const Header = ({
+  setIsSidebarOpen,
+  user,
+  business,
+  isSidebarOpen,
+  setIsMobileActionMenuOpen,
+  handleNotificationClick,
+  handleProfileClick,
+  isMobileActionMenuOpen,
+  closeMobileActionMenu,
+  title,
+  handleLogout,
+  mobileMenuRef, // Diekstrak di sini
+  mobileBtnRef   // Diekstrak di sini
+}: Props) => {
   const [notifOpen, setNotifOpen] = useState<boolean>(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
 
-  // State Loading & Subscription (DIPISAH SESUAI DATABASE BARU)
+  // REFACTOR: Gunakan useRef untuk dropdown lokal (Notifikasi & Profil)
+  const notifContainerRef = useRef<HTMLDivElement>(null);
+  const profileContainerRef = useRef<HTMLDivElement>(null);
+
+  // State Loading & Subscription
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [planType, setPlanType] = useState<'trial' | 'premium'>('trial');
   const [planStatus, setPlanStatus] = useState<'active' | 'expired' | 'canceled'>('active');
-
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 1800);
     return () => clearTimeout(timer);
+  }, []);
+
+  // REFACTOR: Handler untuk menutup menu profil & notif jika user klik di luar kotak
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notifContainerRef.current && !notifContainerRef.current.contains(event.target as Node)) {
+        setNotifOpen(false);
+      }
+      if (profileContainerRef.current && !profileContainerRef.current.contains(event.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const notifications = [
@@ -56,13 +92,10 @@ const Header = ({ setIsSidebarOpen, user, business, isSidebarOpen, setIsMobileAc
   useEffect(() => {
     setPlanType(business?.plan || 'trial');
     setPlanStatus(business?.subscription_status || 'active');
-  }, [business])
-
+  }, [business]);
 
   // --- KOMPONEN RENDER BADGE ---
-  // Dibuat function agar tidak mengulang kode di versi Mobile dan Desktop
   const renderSubscriptionBadge = () => {
-    // 1. Jika Statusnya Habis/Batal (Berlaku untuk Trial maupun Premium)
     if (planStatus === 'expired' || planStatus === 'canceled') {
       return (
         <button
@@ -78,7 +111,6 @@ const Header = ({ setIsSidebarOpen, user, business, isSidebarOpen, setIsMobileAc
       );
     }
 
-    // 2. Jika Status Aktif & Plan adalah Trial
     if (planType === 'trial') {
       return (
         <button
@@ -94,7 +126,6 @@ const Header = ({ setIsSidebarOpen, user, business, isSidebarOpen, setIsMobileAc
       );
     }
 
-    // 3. Jika Status Aktif & Plan adalah Premium
     return (
       <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-slate-950 via-slate-900 to-slate-800 text-amber-400 border border-slate-800 shadow-md ring-1 ring-amber-500/20">
         <Crown size={10} className="fill-current text-amber-400 animate-pulse" />
@@ -104,7 +135,7 @@ const Header = ({ setIsSidebarOpen, user, business, isSidebarOpen, setIsMobileAc
   };
 
   return (
-    <div className={`fixed lg:absolute w-full lg:pr-4 lg:top-4 ${isSubscriptionModalOpen ? "z-61" : "z-50"}`}>
+    <div className={`fixed lg:absolute w-full lg:pr-4 lg:top-4 ${isSubscriptionModalOpen ? "z-[61]" : "z-50"}`}>
       <GlassCard className="py-2.5 px-5 flex items-center justify-between gap-4 border border-white/20 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)]">
         <button
           onClick={() => setIsSidebarOpen(true)}
@@ -129,38 +160,43 @@ const Header = ({ setIsSidebarOpen, user, business, isSidebarOpen, setIsMobileAc
         </nav>
 
         <div className="flex items-center gap-3">
-          {/* Notification Button */}
-          <button onClick={() => setNotifOpen(!notifOpen)} className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-emerald-600 hover:border-emerald-100 transition-all active:scale-95 shadow-sm relative group">
-            <Bell size={19} className="group-hover:rotate-12 transition-transform" />
-            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white animate-pulse"></span>
-          </button>
 
-          {/* MOBILE SUBSCRIPTION BADGE */}
+          {/* REFACTOR: Container Notifikasi dengan Ref */}
+          <div ref={notifContainerRef} className="relative">
+            <button
+              onClick={() => setNotifOpen(!notifOpen)}
+              className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-emerald-600 hover:border-emerald-100 transition-all active:scale-95 shadow-sm relative group"
+            >
+              <Bell size={19} className="group-hover:rotate-12 transition-transform" />
+              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white animate-pulse"></span>
+            </button>
+
+            {notifOpen && (
+              <div className="absolute top-14 right-0 bg-white border border-slate-100 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.08)] w-72 z-40 overflow-hidden transform origin-top-right transition-all">
+                <div className="p-4 border-b border-slate-50 font-bold text-slate-800 flex justify-between items-center bg-slate-50/50">
+                  <span>Notifikasi</span>
+                  <span className="text-[10px] bg-rose-50 text-rose-600 px-2 py-0.5 rounded-full font-medium">3 Baru</span>
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {notifications.map((n) => (
+                    <div key={n.id} className="px-4 py-3.5 hover:bg-slate-50/80 border-b border-slate-100/70 last:border-none transition-colors">
+                      <p className="text-xs text-slate-700 leading-relaxed">{n.message}</p>
+                      <p className="text-[10px] text-slate-400 mt-1.5 font-medium">{n.time}</p>
+                    </div>
+                  ))}
+                </div>
+                <button className="w-full py-2.5 text-xs text-emerald-600 hover:bg-emerald-50/50 font-semibold border-t border-slate-100 transition-colors">Lihat Semua Notifikasi</button>
+              </div>
+            )}
+          </div>
+
           <div className="mt-1 md:hidden">
             {renderSubscriptionBadge()}
           </div>
 
-          {notifOpen && (
-            <div id="notif-menu" className="absolute top-16 right-24 bg-white border border-slate-100 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.08)] w-72 z-40 overflow-hidden transform origin-top-right transition-all">
-              <div className="p-4 border-b border-slate-50 font-bold text-slate-800 flex justify-between items-center bg-slate-50/50">
-                <span>Notifikasi</span>
-                <span className="text-[10px] bg-rose-50 text-rose-600 px-2 py-0.5 rounded-full font-medium">3 Baru</span>
-              </div>
-              <div className="max-h-64 overflow-y-auto">
-                {notifications.map((n) => (
-                  <div key={n.id} className="px-4 py-3.5 hover:bg-slate-50/80 border-b border-slate-100/70 last:border-none transition-colors">
-                    <p className="text-xs text-slate-700 leading-relaxed">{n.message}</p>
-                    <p className="text-[10px] text-slate-400 mt-1.5 font-medium">{n.time}</p>
-                  </div>
-                ))}
-              </div>
-              <button className="w-full py-2.5 text-xs text-emerald-600 hover:bg-emerald-50/50 font-semibold border-t border-slate-100 transition-colors">Lihat Semua Notifikasi</button>
-            </div>
-          )}
-
           <div className="h-8 w-[1px] bg-slate-200/80 mx-1 hidden sm:block"></div>
 
-          {/* USER & SUBSCRIPTION SECTION */}
+          {/* REFACTOR: Container Profil dengan Ref */}
           {isLoading ? (
             <div className="flex items-center gap-3 pl-1">
               <div className="text-right hidden sm:flex flex-col items-end gap-2">
@@ -170,68 +206,65 @@ const Header = ({ setIsSidebarOpen, user, business, isSidebarOpen, setIsMobileAc
               <div className="w-10 h-10 rounded-2xl bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 bg-[length:200%_100%] animate-shimmer"></div>
             </div>
           ) : (
-            <div
-              className="flex items-center gap-3 pl-1 group cursor-pointer select-none relative"
-              onClick={() => setProfileOpen(!profileOpen)}
-            >
-              <div className="text-right hidden md:block">
-                <p className="text-xs font-bold text-slate-800 group-hover:text-emerald-600 transition-colors flex items-center justify-end gap-1">
-                  {user?.name} <ChevronDown size={12} className={`text-slate-400 group-hover:text-emerald-500 transition-transform duration-300 ${profileOpen ? 'rotate-180' : ''}`} />
-                </p>
+            <div ref={profileContainerRef} className="relative">
+              <div
+                className="flex items-center gap-3 pl-1 group cursor-pointer select-none"
+                onClick={() => setProfileOpen(!profileOpen)}
+              >
+                <div className="text-right hidden md:block">
+                  <p className="text-xs font-bold text-slate-800 group-hover:text-emerald-600 transition-colors flex items-center justify-end gap-1">
+                    {user?.name} <ChevronDown size={12} className={`text-slate-400 group-hover:text-emerald-500 transition-transform duration-300 ${profileOpen ? 'rotate-180' : ''}`} />
+                  </p>
+                  <div className="mt-1">
+                    {renderSubscriptionBadge()}
+                  </div>
+                </div>
 
-                {/* DESKTOP SUBSCRIPTION BADGE */}
-                <div className="mt-1">
-                  {renderSubscriptionBadge()}
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold transition-all duration-500 relative ${planStatus === 'expired' || planStatus === 'canceled'
+                  ? 'bg-rose-100 text-rose-500 border border-rose-200 shadow-[0_4px_12px_rgba(225,29,72,0.1)] grayscale'
+                  : planType === 'premium'
+                    ? 'bg-gradient-to-tr from-slate-900 via-slate-800 to-slate-950 text-amber-400 shadow-[0_4px_12px_rgba(0,0,0,0.15)] border border-slate-700/60'
+                    : 'bg-gradient-to-tr from-emerald-500 to-teal-600 text-white shadow-[0_4px_12px_rgba(16,185,129,0.15)] group-hover:shadow-[0_4px_16px_rgba(16,185,129,0.3)]'
+                  }`}>
+                  {
+                    business?.logo_url ?
+                      <img src={formatImage(business?.logo_url)} className='rounded-2xl w-full h-full object-cover' /> :
+                      <Store size={24} className={`${planType === 'premium' ? 'text-slate-300' : "text-slate-100"}`} />
+                  }
+
+                  {planStatus === 'expired' || planStatus === 'canceled' ? (
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full flex items-center justify-center text-[7px] text-white border border-white font-black shadow-sm">!</span>
+                  ) : planType === 'premium' ? (
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full flex items-center justify-center text-[7px] text-slate-950 border border-slate-900 font-black shadow-sm">★</span>
+                  ) : null}
                 </div>
               </div>
 
-              {/* Avatar Frame Box */}
-              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold transition-all duration-500 relative ${planStatus === 'expired' || planStatus === 'canceled'
-                ? 'bg-rose-100 text-rose-500 border border-rose-200 shadow-[0_4px_12px_rgba(225,29,72,0.1)] grayscale'
-                : planType === 'premium'
-                  ? 'bg-gradient-to-tr from-slate-900 via-slate-800 to-slate-950 text-amber-400 shadow-[0_4px_12px_rgba(0,0,0,0.15)] border border-slate-700/60'
-                  : 'bg-gradient-to-tr from-emerald-500 to-teal-600 text-white shadow-[0_4px_12px_rgba(16,185,129,0.15)] group-hover:shadow-[0_4px_16px_rgba(16,185,129,0.3)]'
-                }`}>
-                {
-                  business?.logo_url ?
-                    <img src={formatImage(business?.logo_url)} className='rounded-2xl w-full h-full object-cover' /> :
-                    <Store size={24} className={`${planType === 'premium' ? 'text-slate-300' : "text-slate-100"}`} />
-                }
-                
-                {/* Indikator Bintang (Premium Aktif) atau Tanda Seru (Habis) */}
-                {planStatus === 'expired' || planStatus === 'canceled' ? (
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full flex items-center justify-center text-[7px] text-white border border-white font-black shadow-sm">!</span>
-                ) : planType === 'premium' ? (
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full flex items-center justify-center text-[7px] text-slate-950 border border-slate-900 font-black shadow-sm">★</span>
-                ) : null}
-              </div>
-            </div>
-          )}
-
-          {profileOpen && (
-            <div id="profile-menu" className="absolute top-16 right-6 bg-white border border-slate-100 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] w-60 z-100 overflow-hidden transform origin-top-right transition-all">
-              <div className="px-4 py-3.5 border-b border-slate-50 bg-slate-50/40">
-                <p className="font-bold text-xs text-slate-800">{user?.name || 'Administrator'}</p>
-                <p className="text-[11px] text-slate-400 mt-0.5 truncate">{user?.email || 'admin@dashboard.com'}</p>
-              </div>
-              <div className="p-1">
-                <button className="flex items-center w-full px-3 py-2 text-xs text-slate-600 hover:text-emerald-600 hover:bg-emerald-50/40 rounded-xl transition-all">
-                  <User className="w-4 h-4 mr-2.5 text-slate-400" /> Profil Saya
-                </button>
-                <button className="flex items-center w-full px-3 py-2 text-xs text-slate-600 hover:text-emerald-600 hover:bg-emerald-50/40 rounded-xl transition-all">
-                  <Settings className="w-4 h-4 mr-2.5 text-slate-400" /> Pengaturan Sistem
-                </button>
-                <div className="h-[1px] bg-slate-100 my-1 mx-2"></div>
-                <button className="flex items-center w-full px-3 py-2 text-xs text-rose-500 hover:bg-rose-50/60 rounded-xl transition-all font-medium" onClick={handleLogout}>
-                  <LogOut className="w-4 h-4 mr-2.5 text-rose-400" /> Keluar Aplikasi
-                </button>
-              </div>
+              {profileOpen && (
+                <div className="absolute top-14 right-0 bg-white border border-slate-100 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] w-60 z-100 overflow-hidden transform origin-top-right transition-all">
+                  <div className="px-4 py-3.5 border-b border-slate-50 bg-slate-50/40">
+                    <p className="font-bold text-xs text-slate-800">{user?.name || 'Administrator'}</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5 truncate">{user?.email || 'admin@dashboard.com'}</p>
+                  </div>
+                  <div className="p-1">
+                    <button className="flex items-center w-full px-3 py-2 text-xs text-slate-600 hover:text-emerald-600 hover:bg-emerald-50/40 rounded-xl transition-all">
+                      <User className="w-4 h-4 mr-2.5 text-slate-400" /> Profil Saya
+                    </button>
+                    <button className="flex items-center w-full px-3 py-2 text-xs text-slate-600 hover:text-emerald-600 hover:bg-emerald-50/40 rounded-xl transition-all">
+                      <Settings className="w-4 h-4 mr-2.5 text-slate-400" /> Pengaturan Sistem
+                    </button>
+                    <div className="h-[1px] bg-slate-100 my-1 mx-2"></div>
+                    <button className="flex items-center w-full px-3 py-2 text-xs text-rose-500 hover:bg-rose-50/60 rounded-xl transition-all font-medium" onClick={handleLogout}>
+                      <LogOut className="w-4 h-4 mr-2.5 text-rose-400" /> Keluar Aplikasi
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
       </GlassCard>
 
-      {/* ULTRA LUXURY SUBSCRIPTION MODAL (DARK CINEMATIC DESIGN) */}
       {isSubscriptionModalOpen && (
         <ModalSubscription onClose={() => setIsSubscriptionModalOpen(false)} />
       )}

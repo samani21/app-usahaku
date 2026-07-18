@@ -10,9 +10,9 @@ type Props = {
 
 const ModalSubscription = ({ onClose }: Props) => {
     // State Management
-    const [isFetching, setIsFetching] = useState(true); // Loading untuk fetch data awal
-    const [isLoading, setIsLoading] = useState(false);  // Loading untuk proses bayar / generate VA
-    const [isChecking, setIsChecking] = useState(false); // Loading untuk cek status "Saya Sudah Bayar"
+    const [isFetching, setIsFetching] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isChecking, setIsChecking] = useState(false);
     const [selectedBank, setSelectedBank] = useState('bca');
     const [vaData, setVaData] = useState<any>(null);
     const [errorMsg, setErrorMsg] = useState('');
@@ -29,6 +29,14 @@ const ModalSubscription = ({ onClose }: Props) => {
         { id: 'cimb', name: 'CIMB Virtual Account' }
     ];
 
+    // Mencegah scroll pada body saat modal terbuka
+    useEffect(() => {
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, []);
+
     useEffect(() => {
         getSubscription();
     }, []);
@@ -37,7 +45,7 @@ const ModalSubscription = ({ onClose }: Props) => {
     const getSubscription = async () => {
         setIsFetching(true);
         try {
-            const res = await Get<{ success: boolean, data: any }>('subscription/show-subscription');
+            const res = await Get<{ success: boolean, data: any }>('client/subscription/show-subscription');
             if (res?.success) {
                 setData(res?.data);
                 if (res?.data?.subscription) {
@@ -45,50 +53,43 @@ const ModalSubscription = ({ onClose }: Props) => {
                 }
             }
         } catch (e: any) {
-            // console.error("Error fetching subscription:", e);
+            setErrorMsg('Gagal mengambil data langganan. Pastikan koneksi internet Anda stabil.');
         } finally {
             setIsFetching(false);
         }
     };
 
-    // Fungsi Generate VA Baru
     const handlePayment = async () => {
         setIsLoading(true);
         setErrorMsg('');
-
         try {
-            const response = await Post<any, any>('subscription/charge', {
+            const response = await Post<any, any>('client/subscription/charge', {
                 bank: selectedBank
             });
             if (response.status === 'success') {
                 setVaData(response.data);
             }
         } catch (error: any) {
-            // console.error(error);
-            setErrorMsg(error.response?.data?.message || 'Gagal terhubung ke server pembayaran.');
+            setErrorMsg(error.response?.data?.message || 'Gagal terhubung ke sistem perbankan. Coba beberapa saat lagi.');
         } finally {
             setIsLoading(false);
         }
     };
 
-    // Fungsi Cek Status Pembayaran (Saat tombol "Saya Sudah Bayar" diklik)
     const handleCheckPayment = async () => {
         setIsChecking(true);
-        setErrorMsg(''); // Reset pesan error sebelumnya
+        setErrorMsg('');
         try {
-            const res = await Get<{ success: boolean, data: any }>('subscription/show-subscription');
+            const res = await Get<{ success: boolean, data: any }>('client/subscription/show-subscription');
             if (res?.success) {
-                // Jika sukses bayar, backend is_payment bernilai true
                 if (res?.data?.is_payment && res?.data?.subscription_status) {
                     window.location.reload();
                 } else {
-                    // Jika belum bayar, tampilkan pesan peringatan
                     setErrorMsg('Pembayaran belum terdeteksi. Silakan selesaikan pembayaran terlebih dahulu.');
                 }
             }
         } catch (e: any) {
-            // console.error("Error checking payment:", e);
-            setErrorMsg('Gagal mengecek status pembayaran. Silakan coba lagi.');
+            setErrorMsg('Gagal mengecek status pembayaran. Server mungkin sibuk.');
         } finally {
             setIsChecking(false);
         }
@@ -102,7 +103,7 @@ const ModalSubscription = ({ onClose }: Props) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xl flex items-center justify-center z-100 p-4 transition-all duration-500">
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xl flex items-center justify-center z-[100] p-4 transition-all duration-500">
             <div className="bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 text-slate-200 rounded-[2.5rem] shadow-[0_25px_70px_-15px_rgba(0,0,0,0.8)] w-full max-w-md overflow-hidden transform transition-all border border-slate-800/80 relative">
 
                 {/* Ambient Aurora Glow in Background */}
@@ -118,27 +119,31 @@ const ModalSubscription = ({ onClose }: Props) => {
 
                 {/* KONDISI 1: JIKA VA SUDAH DIGENERATE (SUCCESS SCREEN) */}
                 {vaData ? (
-                    <div className="relative p-8 text-center flex flex-col items-center z-10">
+                    <div className="relative p-6 sm:p-8 text-center flex flex-col items-center z-10">
                         <div className="w-16 h-16 bg-emerald-500/20 border border-emerald-500/50 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(16,185,129,0.2)]">
                             <Check className="w-8 h-8 text-emerald-400" strokeWidth={3} />
                         </div>
                         <h3 className="text-xl font-bold text-white mb-2">Tagihan Dibuat!</h3>
                         <p className="text-sm text-slate-400 mb-6">Silakan lakukan pembayaran ke nomor Virtual Account di bawah ini.</p>
 
-                        <div className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl p-5 mb-6 text-left">
+                        <div className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl p-4 sm:p-5 mb-6 text-left">
                             <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Bank</p>
                             <p className="text-sm font-semibold text-white uppercase mb-4">{vaData.bank} Virtual Account</p>
 
                             <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Nomor Virtual Account</p>
-                            <div className="flex items-center justify-between bg-slate-950 rounded-xl p-3 border border-slate-800 mb-4">
-                                <span className="text-lg font-mono font-bold text-amber-400">{vaData.va_number || 'Sedang diproses...'}</span>
-                                <button onClick={handleCopyVA} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition-colors">
+
+                            {/* PERBAIKAN RESPONSIVE VA NUMBER DI SINI */}
+                            <div className="flex items-center justify-between gap-3 bg-slate-950 rounded-xl p-3 border border-slate-800 mb-4">
+                                <span className="text-base sm:text-lg font-mono font-bold text-amber-400 break-all">
+                                    {vaData.va_number || 'Sedang diproses...'}
+                                </span>
+                                <button onClick={handleCopyVA} className="shrink-0 p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition-colors">
                                     <Copy size={16} />
                                 </button>
                             </div>
 
                             <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Total Tagihan</p>
-                            <p className="text-lg font-bold text-white">Rp {parseInt(vaData.nominal).toLocaleString('id-ID')}</p>
+                            <p className="text-base sm:text-lg font-bold text-white">Rp {parseInt(vaData.nominal).toLocaleString('id-ID')}</p>
                         </div>
 
                         {/* Pesan Error Jika Cek Pembayaran Gagal/Belum Dibayar */}
@@ -181,18 +186,18 @@ const ModalSubscription = ({ onClose }: Props) => {
                                 <Crown className="w-7 h-7 text-amber-400 group-hover:scale-110 transition-transform" />
                             </div>
 
-                            <h3 className="text-2xl font-black text-white tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                            <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
                                 Akses Eksklusif Pro Premium
                             </h3>
-                            <p className="text-xs text-slate-400 mt-2 max-w-[85%] mx-auto leading-relaxed">
+                            <p className="text-[11px] sm:text-xs text-slate-400 mt-2 max-w-[90%] sm:max-w-[85%] mx-auto leading-relaxed">
                                 Tinggalkan batasan dasar. Rasakan fleksibilitas penuh sistem cerdas analitik finansial kami.
                             </p>
                         </div>
 
                         {/* Modal Body */}
-                        <div className="p-6 space-y-4 relative z-10 pt-2">
+                        <div className="p-4 sm:p-6 space-y-4 relative z-10 pt-2">
                             {/* Float Metallic Pricing Box */}
-                            <div className="relative p-5 bg-gradient-to-r from-slate-900 via-slate-800/80 to-slate-900 rounded-2xl border border-slate-700/70 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] overflow-hidden group">
+                            <div className="relative p-4 sm:p-5 bg-gradient-to-r from-slate-900 via-slate-800/80 to-slate-900 rounded-2xl border border-slate-700/70 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] overflow-hidden group">
                                 {
                                     (data?.promo ?? 0) > 0 &&
                                     <div className="absolute top-0 right-0 bg-amber-400 text-slate-950 text-[8px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl flex items-center gap-1 shadow-sm">
@@ -214,26 +219,26 @@ const ModalSubscription = ({ onClose }: Props) => {
                                     </div>
                                 ) : (
                                     /* Tampilan Harga Setelah Data Masuk */
-                                    <div className="flex justify-between items-center">
-                                        <div>
-                                            <span className="block font-bold text-white text-sm">Paket Profesional</span>
-                                            <span className="text-[10px] text-slate-400 flex items-center gap-1 mt-1">
-                                                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Jaminan enkripsi aman
+                                    <div className="flex justify-between items-center gap-2">
+                                        <div className="flex-1">
+                                            <span className="block font-bold text-white text-xs sm:text-sm">Paket Profesional</span>
+                                            <span className="text-[9px] sm:text-[10px] text-slate-400 flex items-center gap-1 mt-1">
+                                                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> <span className="truncate">Jaminan enkripsi aman</span>
                                             </span>
                                         </div>
-                                        <div className="text-right flex flex-col items-end">
+                                        <div className="text-right flex flex-col items-end shrink-0">
                                             {
                                                 (data?.base_price ?? 0) > 0 &&
-                                                <span className="text-xs text-slate-500 line-through">{formatIDR(data?.base_price ?? 0)}</span>
+                                                <span className="text-[10px] sm:text-xs text-slate-500 line-through">{formatIDR(data?.base_price ?? 0)}</span>
                                             }
                                             <div className="flex items-baseline justify-end gap-1">
-                                                <span className="text-2xl font-black text-amber-400 tracking-tight drop-shadow-[0_2px_10px_rgba(245,158,11,0.2)]">
+                                                <span className="text-lg sm:text-2xl font-black text-amber-400 tracking-tight drop-shadow-[0_2px_10px_rgba(245,158,11,0.2)]">
                                                     {formatIDR(data?.total_amount ?? 0)}
                                                 </span>
                                             </div>
                                             {
                                                 (data?.promo ?? 0) > 0 &&
-                                                <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 mt-1">
+                                                <span className="text-[8px] sm:text-[9px] text-emerald-400 font-bold uppercase tracking-wider bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 mt-1">
                                                     Hemat {formatIDR(data?.promo ?? 0)}
                                                 </span>
                                             }
@@ -244,20 +249,20 @@ const ModalSubscription = ({ onClose }: Props) => {
 
                             {/* Pilihan Bank */}
                             <div className="space-y-2">
-                                <p className="text-xs font-semibold text-slate-400 ml-1">Pilih Metode Pembayaran</p>
+                                <p className="text-[11px] sm:text-xs font-semibold text-slate-400 ml-1">Pilih Metode Pembayaran</p>
                                 <div className="grid grid-cols-2 gap-2">
                                     {banks.map((bank) => (
                                         <button
                                             key={bank.id}
                                             onClick={() => !isFetching && setSelectedBank(bank.id)}
                                             disabled={isFetching}
-                                            className={`p-3 rounded-xl border text-left flex items-center gap-2 transition-all ${selectedBank === bank.id
+                                            className={`p-2.5 sm:p-3 rounded-xl border text-left flex items-center gap-2 transition-all ${selectedBank === bank.id
                                                 ? 'border-amber-400 bg-amber-400/10 text-amber-300'
                                                 : 'border-slate-800 bg-slate-900/50 text-slate-400 hover:bg-slate-800'
                                                 } ${isFetching ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
-                                            <Building2 size={16} className={selectedBank === bank.id ? 'text-amber-400' : 'text-slate-500'} />
-                                            <span className="text-[11px] font-semibold uppercase">{bank.id}</span>
+                                            <Building2 size={16} className={`shrink-0 ${selectedBank === bank.id ? 'text-amber-400' : 'text-slate-500'}`} />
+                                            <span className="text-[10px] sm:text-[11px] font-semibold uppercase truncate">{bank.id}</span>
                                         </button>
                                     ))}
                                 </div>
@@ -272,11 +277,11 @@ const ModalSubscription = ({ onClose }: Props) => {
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="p-6 pt-2 pb-8 bg-slate-950/80 border-t border-slate-900/60 flex flex-col gap-2.5">
+                        <div className="p-4 sm:p-6 pt-2 pb-6 sm:pb-8 bg-slate-950/80 border-t border-slate-900/60 flex flex-col gap-2.5">
                             <button
                                 onClick={handlePayment}
                                 disabled={isLoading || isFetching}
-                                className="w-full px-5 py-3.5 text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-600 rounded-xl shadow-[0_4px_25px_rgba(245,158,11,0.3)] hover:shadow-[0_4px_35px_rgba(245,158,11,0.5)] active:scale-[0.99] active:brightness-95 disabled:opacity-70 disabled:cursor-not-allowed transition-all duration-300 flex justify-center items-center gap-2 uppercase tracking-wide"
+                                className="w-full px-5 py-3 sm:py-3.5 text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-600 rounded-xl shadow-[0_4px_25px_rgba(245,158,11,0.3)] hover:shadow-[0_4px_35px_rgba(245,158,11,0.5)] active:scale-[0.99] active:brightness-95 disabled:opacity-70 disabled:cursor-not-allowed transition-all duration-300 flex justify-center items-center gap-2 uppercase tracking-wide"
                             >
                                 {isLoading ? (
                                     <>
@@ -284,17 +289,17 @@ const ModalSubscription = ({ onClose }: Props) => {
                                     </>
                                 ) : isFetching ? (
                                     <>
-                                        <Loader2 size={16} className="animate-spin" /> Menyiapkan Data...
+                                        <Loader2 size={16} className="animate-spin" /> Menyiapkan...
                                     </>
                                 ) : (
-                                    'Mulai Berlangganan Sekarang 🚀'
+                                    'Mulai Berlangganan 🚀'
                                 )}
                             </button>
 
                             <button
                                 onClick={onClose}
                                 disabled={isLoading}
-                                className="w-full px-4 py-2 text-[11px] font-semibold text-slate-500 hover:text-slate-300 bg-transparent transition-colors text-center disabled:opacity-50"
+                                className="w-full px-4 py-2 text-[10px] sm:text-[11px] font-semibold text-slate-500 hover:text-slate-300 bg-transparent transition-colors text-center disabled:opacity-50"
                             >
                                 Kembali ke Dashboard Dasar
                             </button>
@@ -306,4 +311,4 @@ const ModalSubscription = ({ onClose }: Props) => {
     )
 }
 
-export default ModalSubscription
+export default ModalSubscription;
