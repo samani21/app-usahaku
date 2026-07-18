@@ -27,7 +27,7 @@ const ModalCrud = ({ children, isOpen, title, onClose }: Props) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 sm:p-6">
+        <div className="fixed inset-0 h-full z-60 flex items-center justify-center p-4 sm:p-6">
             {/* Backdrop Section 
                 Menambahkan onClick agar modal tertutup saat area luar diklik 
             */}

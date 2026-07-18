@@ -68,7 +68,7 @@ export default function Alert({ type, message, onClose }: Props) {
         }, 5000)
     }, [])
     return (
-        <div className="absolute z-100 top-4 right-0 w-full max-w-xl">
+        <div className="fixed z-100 top-4 right-0 w-full max-w-xl">
             <AlertComponent
                 type={type}
                 message={message}
