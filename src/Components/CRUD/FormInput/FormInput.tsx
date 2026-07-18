@@ -123,26 +123,48 @@ const FormInput = ({
     // --- Render Switcher ---
     const renderInputElement = () => {
         switch (type) {
+            // FIX 1: Toolbar WYSIWYG dibuat jadi Horizontal Scroll (Mobile Friendly)
             case "wysiwyg":
-                const btnClass = `p-1.5 rounded-md transition-all text-sm font-semibold flex items-center justify-center ${disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-slate-200"}`;
+                const btnClass = `shrink-0 w-8 h-8 rounded-md transition-all text-sm font-bold flex items-center justify-center ${disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-slate-200"}`;
                 const getActiveStyle = (isActive: boolean) => isActive && !disabled ? 'bg-emerald-100 text-emerald-700 shadow-sm' : 'text-slate-600';
 
                 return (
                     <div className={`flex flex-col border rounded-xl overflow-hidden shadow-sm transition-all duration-300 ${error ? "border-red-500 ring-[3px] ring-red-500/20" : "border-slate-200 focus-within:border-emerald-500 focus-within:ring-[3px] focus-within:ring-emerald-500/20"} ${disabled ? "opacity-80" : ""}`}>
-                        <div className="flex flex-wrap items-center gap-1 p-2 bg-slate-50/80 backdrop-blur-sm border-b border-slate-200">
-                            <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().toggleBold().run()} className={`${btnClass} ${getActiveStyle(editor?.isActive('bold') || false)}`}><b>B</b></button>
-                            <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().toggleItalic().run()} className={`${btnClass} ${getActiveStyle(editor?.isActive('italic') || false)}`}><i>I</i></button>
-                            <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().toggleUnderline().run()} className={`${btnClass} ${getActiveStyle(editor?.isActive('underline') || false)}`}><u>U</u></button>
-                            <div className="w-[1px] h-5 bg-slate-300 mx-1" />
+                        {/* Wrapper overflow-x-auto untuk mobile */}
+                        <div className="flex overflow-x-auto items-center gap-1 p-2 bg-slate-50/80 backdrop-blur-sm border-b border-slate-200 sm:flex-wrap [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                            <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().toggleBold().run()} className={`${btnClass} ${getActiveStyle(editor?.isActive('bold') || false)}`}>B</button>
+                            <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().toggleItalic().run()} className={`${btnClass} ${getActiveStyle(editor?.isActive('italic') || false)}`}><i className="italic">I</i></button>
+                            <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().toggleUnderline().run()} className={`${btnClass} ${getActiveStyle(editor?.isActive('underline') || false)}`}><u className="underline">U</u></button>
+                            <div className="shrink-0 w-[1px] h-5 bg-slate-300 mx-1" />
                             <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().setTextAlign('left').run()} className={`${btnClass} ${getActiveStyle(editor?.isActive({ textAlign: 'left' }) || false)}`}>L</button>
                             <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().setTextAlign('center').run()} className={`${btnClass} ${getActiveStyle(editor?.isActive({ textAlign: 'center' }) || false)}`}>C</button>
                             <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().setTextAlign('right').run()} className={`${btnClass} ${getActiveStyle(editor?.isActive({ textAlign: 'right' }) || false)}`}>R</button>
-                            <div className="w-[1px] h-5 bg-slate-300 mx-1" />
+                            <div className="shrink-0 w-[1px] h-5 bg-slate-300 mx-1" />
                             <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().toggleBulletList().run()} className={`${btnClass} ${getActiveStyle(editor?.isActive('bulletList') || false)}`}>•</button>
-                            <div className="flex-1"></div>
-                            <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().undo().run()} className={btnClass}>Undo</button>
+                            <div className="flex-1 min-w-[20px]"></div>
+                            <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().undo().run()} className={`${btnClass} px-3 w-auto font-medium text-xs`}>Undo</button>
                         </div>
                         <EditorContent editor={editor} disabled={disabled} />
+                    </div>
+                );
+
+            // FIX 2: Tampilan Custom Khusus Input Color
+            case "color":
+                return (
+                    <div className="flex items-center gap-3">
+                        <input
+                            type="color"
+                            name={name}
+                            disabled={disabled}
+                            value={value ?? "#10b981"}
+                            onChange={onChange}
+                            className={`h-11 w-16 p-1 cursor-pointer bg-white border rounded-xl focus:outline-none focus:ring-[3px] transition-all duration-300
+                                ${disabled ? "opacity-60 cursor-not-allowed border-slate-200" : "border-slate-200 hover:border-slate-300 focus:border-emerald-500 focus:ring-emerald-500/20"}
+                                ${error ? "!border-red-500 focus:!ring-red-500/20" : ""}`}
+                        />
+                        <span className="text-sm font-bold text-slate-600 uppercase tracking-widest bg-slate-50 border border-slate-200 px-4 py-2 rounded-lg shadow-inner">
+                            {value || "#10b981"}
+                        </span>
                     </div>
                 );
 
