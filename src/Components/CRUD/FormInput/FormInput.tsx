@@ -123,14 +123,12 @@ const FormInput = ({
     // --- Render Switcher ---
     const renderInputElement = () => {
         switch (type) {
-            // FIX 1: Toolbar WYSIWYG dibuat jadi Horizontal Scroll (Mobile Friendly)
             case "wysiwyg":
                 const btnClass = `shrink-0 w-8 h-8 rounded-md transition-all text-sm font-bold flex items-center justify-center ${disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-slate-200"}`;
                 const getActiveStyle = (isActive: boolean) => isActive && !disabled ? 'bg-emerald-100 text-emerald-700 shadow-sm' : 'text-slate-600';
 
                 return (
                     <div className={`flex flex-col border rounded-xl overflow-hidden shadow-sm transition-all duration-300 ${error ? "border-red-500 ring-[3px] ring-red-500/20" : "border-slate-200 focus-within:border-emerald-500 focus-within:ring-[3px] focus-within:ring-emerald-500/20"} ${disabled ? "opacity-80" : ""}`}>
-                        {/* Wrapper overflow-x-auto untuk mobile */}
                         <div className="flex overflow-x-auto items-center gap-1 p-2 bg-slate-50/80 backdrop-blur-sm border-b border-slate-200 sm:flex-wrap [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                             <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().toggleBold().run()} className={`${btnClass} ${getActiveStyle(editor?.isActive('bold') || false)}`}>B</button>
                             <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().toggleItalic().run()} className={`${btnClass} ${getActiveStyle(editor?.isActive('italic') || false)}`}><i className="italic">I</i></button>
@@ -148,7 +146,6 @@ const FormInput = ({
                     </div>
                 );
 
-            // FIX 2: Tampilan Custom Khusus Input Color
             case "color":
                 return (
                     <div className="flex items-center gap-3">
@@ -248,6 +245,52 @@ const FormInput = ({
                     />
                 );
 
+            // FIX: Tambahan case "radio" agar tampilannya rapi
+            case "radio":
+                return (
+                    <div className={`flex flex-col space-y-3 mt-1 ${disabled ? "opacity-70" : ""}`}>
+                        {options.map((opt) => (
+                            <label key={opt.value} className={`flex items-center space-x-3 w-max ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}>
+                                <input
+                                    type="radio"
+                                    name={name}
+                                    disabled={disabled}
+                                    value={opt.value}
+                                    checked={value !== undefined && value !== "" && value?.toString() === opt.value.toString()}
+                                    onChange={onChange}
+                                    className="w-5 h-5 text-emerald-600 border-slate-300 focus:ring-emerald-500/20 focus:ring-[3px] transition-all disabled:cursor-not-allowed cursor-pointer"
+                                />
+                                <span className={`text-sm font-medium ${disabled ? "text-slate-500" : "text-slate-700"}`}>
+                                    {opt.label}
+                                </span>
+                            </label>
+                        ))}
+                    </div>
+                );
+
+            // FIX: Tambahan case "checkbox"
+            case "checkbox":
+                return (
+                    <label className={`flex items-center space-x-3 w-max mt-1 ${disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}>
+                        <input
+                            type="checkbox"
+                            name={name}
+                            disabled={disabled}
+                            checked={!!value}
+                            onChange={(e) =>
+                                onChange({
+                                    ...e,
+                                    target: { ...e.target, name, value: e.target.checked },
+                                } as any)
+                            }
+                            className="w-5 h-5 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500/20 focus:ring-[3px] transition-all disabled:cursor-not-allowed cursor-pointer"
+                        />
+                        <span className={`text-sm font-medium ${disabled ? "text-slate-500" : "text-slate-700"}`}>
+                            {placeholder || label}
+                        </span>
+                    </label>
+                );
+
             case "switch":
                 return (
                     <button
@@ -322,22 +365,25 @@ const FormInput = ({
 
     return (
         <div className="flex flex-col space-y-2 w-full">
-            <div className="flex items-center gap-2">
-                <label className={`text-sm font-bold tracking-wide flex items-center gap-1 ${disabled ? "text-slate-400" : "text-slate-700"}`}>
-                    {label} {required && <span className="text-red-500">*</span>}
-                </label>
-                {information && (
-                    <div className="group relative flex items-center justify-center cursor-help">
-                        <Info size={16} className="text-slate-400 hover:text-emerald-500 transition-colors" />
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs px-3 py-2 bg-slate-800 text-white text-xs font-medium rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                            {information}
-                            <svg className="absolute text-slate-800 h-2 w-full left-0 top-full" viewBox="0 0 255 255">
-                                <polygon className="fill-current" points="0,0 127.5,127.5 255,0" />
-                            </svg>
+            {/* Sembunyikan label utama (atas) KHUSUS untuk checkbox agar tidak double label, kecuali Anda tidak memakai placeholder. */}
+            {type !== "checkbox" && (
+                <div className="flex items-center gap-2">
+                    <label className={`text-sm font-bold tracking-wide flex items-center gap-1 ${disabled ? "text-slate-400" : "text-slate-700"}`}>
+                        {label} {required && <span className="text-red-500">*</span>}
+                    </label>
+                    {information && (
+                        <div className="group relative flex items-center justify-center cursor-help">
+                            <Info size={16} className="text-slate-400 hover:text-emerald-500 transition-colors" />
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs px-3 py-2 bg-slate-800 text-white text-xs font-medium rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                                {information}
+                                <svg className="absolute text-slate-800 h-2 w-full left-0 top-full" viewBox="0 0 255 255">
+                                    <polygon className="fill-current" points="0,0 127.5,127.5 255,0" />
+                                </svg>
+                            </div>
                         </div>
-                    </div>
-                )}
-            </div>
+                    )}
+                </div>
+            )}
 
             {renderInputElement()}
 

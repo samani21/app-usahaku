@@ -236,7 +236,7 @@ const CategoriesComponent = () => {
     ], [handleEdit, handleDelete]);
 
     return (
-        <MainLayout>
+        <MainLayout page='Kelola Kategori Produk'>
             <div className='relative space-y-6'>
                 <FilterComponent
                     search={search}
