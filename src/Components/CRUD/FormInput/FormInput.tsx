@@ -5,7 +5,7 @@ import Link from "@tiptap/extension-link";
 import TextAlign from '@tiptap/extension-text-align';
 import TiptapImage from '@tiptap/extension-image';
 import TiptapUnderline from '@tiptap/extension-underline';
-import { AlertTriangle, Eye, EyeOff, Info, Link as LinkIcon, ChevronDown, Check } from "lucide-react";
+import { AlertTriangle, Eye, EyeOff, Info, ChevronDown, Check } from "lucide-react";
 import React, { ChangeEvent, useMemo, useState, useEffect, useRef } from "react";
 
 type Props = {
@@ -26,6 +26,65 @@ type Props = {
     information?: string;
 };
 
+// 1. Pindahkan Extensions ke luar agar referensinya stabil dan tidak terduplikasi
+const wysiwygExtensions = [
+    StarterKit,
+    TiptapUnderline,
+    TiptapImage,
+    TextAlign.configure({ types: ['heading', 'paragraph'] }),
+    Link.configure({ openOnClick: false }),
+];
+
+// 2. Buat Komponen khusus untuk WYSIWYG agar useEditor tidak jalan di input biasa
+const WysiwygInput = ({ value, onChange, disabled, error, name }: any) => {
+    const editor = useEditor({
+        extensions: wysiwygExtensions,
+        editable: !disabled,
+        immediatelyRender: false,
+        content: value || '',
+        editorProps: {
+            attributes: {
+                class: `prose prose-sm focus:outline-none max-w-none min-h-[150px] p-4 bg-white rounded-b-xl transition-colors duration-200 ${error ? "border-red-500" : "border-slate-200"} ${disabled ? "bg-slate-50 text-slate-400 cursor-not-allowed" : ""}`,
+            },
+        },
+        onUpdate: ({ editor }) => {
+            if (editor.isFocused && !disabled) {
+                onChange({ target: { name, value: editor.getHTML(), type: 'wysiwyg' } });
+            }
+        },
+    });
+
+    useEffect(() => {
+        if (editor && value !== editor.getHTML()) {
+            editor.commands.setContent(value || '');
+        }
+        editor?.setEditable(!disabled);
+    }, [value, editor, disabled]);
+
+    const btnClass = `shrink-0 w-8 h-8 rounded-md transition-all text-sm font-bold flex items-center justify-center ${disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-slate-200"}`;
+    const getActiveStyle = (isActive: boolean) => isActive && !disabled ? 'bg-emerald-100 text-emerald-700 shadow-sm' : 'text-slate-600';
+
+    return (
+        <div className={`flex flex-col border rounded-xl overflow-hidden shadow-sm transition-all duration-300 ${error ? "border-red-500 ring-[3px] ring-red-500/20" : "border-slate-200 focus-within:border-emerald-500 focus-within:ring-[3px] focus-within:ring-emerald-500/20"} ${disabled ? "opacity-80" : ""}`}>
+            <div className="flex overflow-x-auto items-center gap-1 p-2 bg-slate-50/80 backdrop-blur-sm border-b border-slate-200 sm:flex-wrap [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().toggleBold().run()} className={`${btnClass} ${getActiveStyle(editor?.isActive('bold') || false)}`}>B</button>
+                <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().toggleItalic().run()} className={`${btnClass} ${getActiveStyle(editor?.isActive('italic') || false)}`}><i className="italic">I</i></button>
+                <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().toggleUnderline().run()} className={`${btnClass} ${getActiveStyle(editor?.isActive('underline') || false)}`}><u className="underline">U</u></button>
+                <div className="shrink-0 w-[1px] h-5 bg-slate-300 mx-1" />
+                <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().setTextAlign('left').run()} className={`${btnClass} ${getActiveStyle(editor?.isActive({ textAlign: 'left' }) || false)}`}>L</button>
+                <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().setTextAlign('center').run()} className={`${btnClass} ${getActiveStyle(editor?.isActive({ textAlign: 'center' }) || false)}`}>C</button>
+                <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().setTextAlign('right').run()} className={`${btnClass} ${getActiveStyle(editor?.isActive({ textAlign: 'right' }) || false)}`}>R</button>
+                <div className="shrink-0 w-[1px] h-5 bg-slate-300 mx-1" />
+                <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().toggleBulletList().run()} className={`${btnClass} ${getActiveStyle(editor?.isActive('bulletList') || false)}`}>•</button>
+                <div className="flex-1 min-w-[20px]"></div>
+                <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().undo().run()} className={`${btnClass} px-3 w-auto font-medium text-xs`}>Undo</button>
+            </div>
+            <EditorContent editor={editor} disabled={disabled} />
+        </div>
+    );
+};
+
+// --- Komponen Utama ---
 const FormInput = ({
     label, type, name, value, onChange, error, min, max,
     required = false, options = [], placeholder, disabled = false, information
@@ -91,60 +150,12 @@ const FormInput = ({
         return options.filter((opt) => opt.label.toLowerCase().includes(search.toLowerCase()));
     }, [search, options, open]);
 
-    // --- Tiptap Editor ---
-    const editor = useEditor({
-        extensions: [
-            StarterKit, TiptapUnderline, TiptapImage,
-            TextAlign.configure({ types: ['heading', 'paragraph'] }),
-            Link.configure({ openOnClick: false }),
-        ],
-        editable: !disabled,
-        immediatelyRender: false,
-        content: value || '',
-        editorProps: {
-            attributes: {
-                class: `prose prose-sm focus:outline-none max-w-none min-h-[150px] p-4 bg-white rounded-b-xl transition-colors duration-200 ${error ? "border-red-500" : "border-slate-200"} ${disabled ? "bg-slate-50 text-slate-400 cursor-not-allowed" : ""}`,
-            },
-        },
-        onUpdate: ({ editor }) => {
-            if (editor.isFocused && !disabled) {
-                onChange({ target: { name, value: editor.getHTML(), type: 'wysiwyg' } });
-            }
-        },
-    });
-
-    useEffect(() => {
-        if (editor && value !== editor.getHTML()) {
-            editor.commands.setContent(value || '');
-        }
-        editor?.setEditable(!disabled);
-    }, [value, editor, disabled]);
-
     // --- Render Switcher ---
     const renderInputElement = () => {
         switch (type) {
             case "wysiwyg":
-                const btnClass = `shrink-0 w-8 h-8 rounded-md transition-all text-sm font-bold flex items-center justify-center ${disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-slate-200"}`;
-                const getActiveStyle = (isActive: boolean) => isActive && !disabled ? 'bg-emerald-100 text-emerald-700 shadow-sm' : 'text-slate-600';
-
-                return (
-                    <div className={`flex flex-col border rounded-xl overflow-hidden shadow-sm transition-all duration-300 ${error ? "border-red-500 ring-[3px] ring-red-500/20" : "border-slate-200 focus-within:border-emerald-500 focus-within:ring-[3px] focus-within:ring-emerald-500/20"} ${disabled ? "opacity-80" : ""}`}>
-                        <div className="flex overflow-x-auto items-center gap-1 p-2 bg-slate-50/80 backdrop-blur-sm border-b border-slate-200 sm:flex-wrap [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                            <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().toggleBold().run()} className={`${btnClass} ${getActiveStyle(editor?.isActive('bold') || false)}`}>B</button>
-                            <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().toggleItalic().run()} className={`${btnClass} ${getActiveStyle(editor?.isActive('italic') || false)}`}><i className="italic">I</i></button>
-                            <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().toggleUnderline().run()} className={`${btnClass} ${getActiveStyle(editor?.isActive('underline') || false)}`}><u className="underline">U</u></button>
-                            <div className="shrink-0 w-[1px] h-5 bg-slate-300 mx-1" />
-                            <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().setTextAlign('left').run()} className={`${btnClass} ${getActiveStyle(editor?.isActive({ textAlign: 'left' }) || false)}`}>L</button>
-                            <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().setTextAlign('center').run()} className={`${btnClass} ${getActiveStyle(editor?.isActive({ textAlign: 'center' }) || false)}`}>C</button>
-                            <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().setTextAlign('right').run()} className={`${btnClass} ${getActiveStyle(editor?.isActive({ textAlign: 'right' }) || false)}`}>R</button>
-                            <div className="shrink-0 w-[1px] h-5 bg-slate-300 mx-1" />
-                            <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().toggleBulletList().run()} className={`${btnClass} ${getActiveStyle(editor?.isActive('bulletList') || false)}`}>•</button>
-                            <div className="flex-1 min-w-[20px]"></div>
-                            <button disabled={disabled} type="button" onClick={() => editor?.chain().focus().undo().run()} className={`${btnClass} px-3 w-auto font-medium text-xs`}>Undo</button>
-                        </div>
-                        <EditorContent editor={editor} disabled={disabled} />
-                    </div>
-                );
+                // 3. Panggil komponen WYSIWYG hanya jika typenya adalah wysiwyg
+                return <WysiwygInput value={value} onChange={onChange} disabled={disabled} error={error} name={name} />;
 
             case "color":
                 return (
@@ -245,7 +256,6 @@ const FormInput = ({
                     />
                 );
 
-            // FIX: Tambahan case "radio" agar tampilannya rapi
             case "radio":
                 return (
                     <div className={`flex flex-col space-y-3 mt-1 ${disabled ? "opacity-70" : ""}`}>
@@ -268,7 +278,6 @@ const FormInput = ({
                     </div>
                 );
 
-            // FIX: Tambahan case "checkbox"
             case "checkbox":
                 return (
                     <label className={`flex items-center space-x-3 w-max mt-1 ${disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}>
@@ -348,7 +357,6 @@ const FormInput = ({
                     </div>
                 );
 
-            // Fallback default behaviour untuk text, number, date, time, dsb.
             default:
                 return (
                     <input
@@ -365,7 +373,6 @@ const FormInput = ({
 
     return (
         <div className="flex flex-col space-y-2 w-full">
-            {/* Sembunyikan label utama (atas) KHUSUS untuk checkbox agar tidak double label, kecuali Anda tidak memakai placeholder. */}
             {type !== "checkbox" && (
                 <div className="flex items-center gap-2">
                     <label className={`text-sm font-bold tracking-wide flex items-center gap-1 ${disabled ? "text-slate-400" : "text-slate-700"}`}>

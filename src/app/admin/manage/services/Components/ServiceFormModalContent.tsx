@@ -330,8 +330,10 @@ const ServiceFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
 
         if (productData.image) {
             formData.append('image', productData.image, productData.image.name);
+        } else if (dataUpdate?.image && !productData.imagePreviewUrl) {
+            // INFO: Jika sebelumnya ada gambar (dataUpdate), tapi preview-nya sekarang kosong, kirim sinyal hapus
+            formData.append('remove_image', '1');
         }
-
         if (productData.has_variant === 1) {
             productData.variants.forEach((variant, i) => {
                 if (variant.id) formData.append(`variants[${i}][id]`, String(variant.id));
