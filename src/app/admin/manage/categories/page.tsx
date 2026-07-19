@@ -154,12 +154,8 @@ const CategoriesComponent = () => {
                 handleCloseModal();
                 setShowAlert({ type: 'success', message: 'Berhasil hapus data', isOpen: true });
             }
-        } catch (err: unknown) {
-            if (err instanceof Error) {
-                setShowAlert({ type: 'error', message: 'Gagal proses data: ' + err.message, isOpen: true });
-            } else {
-                setShowAlert({ type: 'error', message: 'Gagal proses data.', isOpen: true });
-            }
+        } catch (err: any) {
+            setShowAlert({ type: 'error', message: 'Gagal proses data: ' + err?.message, isOpen: true });
         } finally {
             setLoading(false);
         }
