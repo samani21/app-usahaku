@@ -15,12 +15,13 @@ import FilterComponent from "@/Components/CRUD/FilterComponent";
 import DataTable from "@/Components/CRUD/DataTable";
 import Alert from "@/Components/Alert";
 import { formatImage } from "@/utils/formatImage";
+import { Icon } from "@iconify/react";
 
 interface ProductResponse {
     data: ProductsType[];
 }
 
-export default function ProductTrash() {
+export default function ServiceTrash() {
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [dateRangeText, setDateRangeText] = useState("");
@@ -79,7 +80,7 @@ export default function ProductTrash() {
         setLoading(true);
         setError('');
         try {
-            const res = await Get<{ success: boolean; data: ProductResponse; meta: Meta }>(`client/products/trashed${queryString}`);
+            const res = await Get<{ success: boolean; data: ProductResponse; meta: Meta }>(`client/services/trashed${queryString}`);
             if (res?.success) {
                 setProducts(res.data?.data || []);
                 setMeta(res.meta);
@@ -101,8 +102,8 @@ export default function ProductTrash() {
             isOpen: true,
             type: 'product',
             id: id,
-            title: 'Pulihkan Produk',
-            message: 'Apakah Anda yakin ingin memulihkan produk ini beserta seluruh variannya?'
+            title: 'Pulihkan Jasa',
+            message: 'Apakah Anda yakin ingin memulihkan jasa ini beserta seluruh layanannya?'
         });
     };
 
@@ -111,30 +112,29 @@ export default function ProductTrash() {
             isOpen: true,
             type: 'variant',
             id: id,
-            title: 'Pulihkan Varian',
-            message: 'Apakah Anda yakin ingin memulihkan varian ini?'
+            title: 'Pulihkan Layanan',
+            message: 'Apakah Anda yakin ingin memulihkan layanan ini?'
         });
     };
 
-    // --- EKSEKUSI PEMULIHAN (SETELAH KLIK 'YA' DI MODAL) ---
+    // --- EKSEKUSI PEMULIHAN ---
     const executeRestore = async () => {
         if (!confirmModal.id) return;
 
         setLoading(true);
-        // Tutup modal secara instan
         setConfirmModal({ ...confirmModal, isOpen: false });
 
         try {
             const endpoint = confirmModal.type === 'product'
-                ? `client/products/${confirmModal.id}/restore`
-                : `client/products/variants/${confirmModal.id}/restore`;
+                ? `client/services/${confirmModal.id}/restore`
+                : `client/services/variants/${confirmModal.id}/restore`;
 
             const res = await Post(endpoint, new FormData());
             if (res) {
                 fetchTrashedProducts();
                 setShowAlert({
                     type: 'success',
-                    message: `Berhasil memulihkan ${confirmModal.type === 'product' ? 'produk' : 'varian'}!`,
+                    message: `Berhasil memulihkan ${confirmModal.type === 'product' ? 'jasa' : 'layanan'}!`,
                     isOpen: true
                 });
             }
@@ -152,30 +152,37 @@ export default function ProductTrash() {
         {
             key: "image",
             label: "Gambar",
-            width: "120px",
+            width: "150px",
             render: (row) => {
-                const isProductTrashed = row.deleted_at;
+                if (!row?.image) return <span className="text-slate-400">-</span>;
+
+                if (row.image.startsWith("usahaku") || row.image.startsWith("http")) {
+                    return (
+                        <div className="w-14 h-14 bg-slate-50 border border-slate-100 rounded-xl overflow-hidden shadow-sm flex items-center justify-center p-1">
+                            <img src={formatImage(row.image)} alt={row.name} className="w-full h-full object-contain" />
+                        </div>
+                    );
+                }
+
                 return (
-                    <img
-                        src={formatImage(row.image)}
-                        alt={row.name}
-                        className={`w-20 h-20 object-cover rounded-xl bg-slate-50 border border-slate-100 ${isProductTrashed ? 'grayscale opacity-60' : ''}`}
-                    />
-                )
-            },
+                    <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center shadow-sm">
+                        <Icon icon={row.image} color={row.color_icon || "#64748b"} className="text-3xl" />
+                    </div>
+                );
+            }
         },
         {
             key: "name",
-            label: "Produk",
+            label: "Nama Jasa",
             render: (row) => {
                 const isProductTrashed = row.deleted_at;
                 return (
                     <div>
                         <span className={`font-bold ${isProductTrashed ? 'line-through text-slate-500' : 'text-slate-800'}`}>{row.name}</span>
                         {isProductTrashed ? (
-                            <span className="block text-[11px] font-bold text-rose-500 uppercase mt-1">Produk Dihapus</span>
+                            <span className="block text-[11px] font-bold text-rose-500 uppercase mt-1">Jasa Dihapus</span>
                         ) : (
-                            <span className="block text-[11px] font-bold text-amber-500 uppercase mt-1">Varian Dihapus</span>
+                            <span className="block text-[11px] font-bold text-amber-500 uppercase mt-1">Layanan Dihapus</span>
                         )}
                     </div>
                 );
@@ -183,27 +190,25 @@ export default function ProductTrash() {
         },
         {
             key: "variants",
-            label: "Varian & Stok",
+            label: "Tipe Layanan",
             render: (row) => {
                 if (!row.variants || row.variants.length === 0) return <span className="text-slate-400">-</span>;
                 return (
                     <div className="space-y-2">
                         {row.variants.map((v: any, i: number) => {
-                            const isVariantTrashed = v.deleted_at; // Cek apakah varian ini terhapus
+                            const isVariantTrashed = v.deleted_at;
 
                             return (
                                 <div key={i} className={`flex items-center gap-2 text-sm ${isVariantTrashed ? 'bg-rose-50/50 p-1 rounded' : ''}`}>
                                     <span className={isVariantTrashed ? 'line-through text-slate-400' : 'text-slate-700 font-semibold'}>{v.name}</span>
                                     <span className="text-slate-400 text-xs">|</span>
-                                    <span className={isVariantTrashed ? 'text-slate-400' : 'text-emerald-600 font-bold'}>{v?.product_variant_stock ?? 0}</span>
 
-                                    {/* Tampilkan tombol pulihkan varian jika varian ini dihapus TAPI produknya tidak dihapus */}
                                     {isVariantTrashed && !row.deleted_at && (
                                         <button
                                             onClick={() => promptRestoreVariant(v.id)}
                                             className="ml-auto flex items-center gap-1 text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded hover:bg-emerald-200"
                                         >
-                                            <RefreshCw size={10} /> Pulihkan Varian
+                                            <RefreshCw size={10} /> Pulihkan Layanan
                                         </button>
                                     )}
                                 </div>
@@ -218,7 +223,6 @@ export default function ProductTrash() {
             label: "Aksi",
             align: "center",
             render: (row) => {
-                // Jika produk utamanya yang dihapus, tampilkan tombol Pulihkan Produk Utama
                 if (row.deleted_at) {
                     return (
                         <div className="flex justify-center">
@@ -226,12 +230,12 @@ export default function ProductTrash() {
                                 onClick={() => promptRestoreProduct(row.id)}
                                 className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700 rounded-lg font-bold text-sm transition-colors"
                             >
-                                <RefreshCw size={16} /> Pulihkan Produk
+                                <RefreshCw size={16} /> Pulihkan Jasa
                             </button>
                         </div>
                     );
                 } else {
-                    return <span className="text-xs text-slate-400 italic">Produk Aktif</span>;
+                    return <span className="text-xs text-slate-400 italic">Jasa Aktif</span>;
                 }
             },
         },
@@ -269,17 +273,23 @@ export default function ProductTrash() {
                             return (
                                 <GlassCard key={row.id} className="p-4 flex flex-col gap-3">
                                     <div className="flex gap-4">
-                                        <img
-                                            src={formatImage(row.image)}
-                                            alt={row.name}
-                                            className={`w-20 h-20 object-cover rounded-xl border border-slate-100 ${isProductTrashed ? 'grayscale opacity-60' : ''}`}
-                                        />
+
+                                        {
+                                            row.image?.startsWith('usahaku') ?
+                                                <img
+                                                    src={formatImage(row.image)}
+                                                    alt={row.name}
+                                                    className={`w-20 h-20 object-cover rounded-xl border border-slate-100 ${isProductTrashed ? 'grayscale opacity-60' : ''}`}
+                                                /> :
+                                                <Icon icon={row?.image} className={`w-20 h-20 object-cover rounded-xl border border-slate-100 ${isProductTrashed ? 'grayscale opacity-60' : ''}`} />
+
+                                        }
                                         <div className="flex-1">
                                             <h3 className={`font-bold text-base ${isProductTrashed ? 'line-through text-slate-500' : 'text-slate-800'}`}>{row.name}</h3>
                                             {isProductTrashed ? (
-                                                <span className="inline-block px-2 py-0.5 mt-1 bg-rose-100 text-rose-600 text-[10px] font-bold rounded uppercase tracking-wider">Produk Dihapus</span>
+                                                <span className="inline-block px-2 py-0.5 mt-1 bg-rose-100 text-rose-600 text-[10px] font-bold rounded uppercase tracking-wider">Jasa Dihapus</span>
                                             ) : (
-                                                <span className="inline-block px-2 py-0.5 mt-1 bg-amber-100 text-amber-600 text-[10px] font-bold rounded uppercase tracking-wider">Varian Dihapus</span>
+                                                <span className="inline-block px-2 py-0.5 mt-1 bg-amber-100 text-amber-600 text-[10px] font-bold rounded uppercase tracking-wider">Layanan Dihapus</span>
                                             )}
                                         </div>
                                     </div>
@@ -293,15 +303,14 @@ export default function ProductTrash() {
                                                     <div key={i} className={`flex flex-col gap-1 border-b border-slate-200/50 pb-2 last:border-0 last:pb-0 ${isVariantTrashed ? 'text-slate-500' : 'text-slate-800'}`}>
                                                         <div className="flex justify-between items-center">
                                                             <span className={`${isVariantTrashed ? 'line-through' : 'font-semibold'}`}>{v.name}</span>
-                                                            <span className={`${isVariantTrashed ? '' : 'text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full'}`}>Stok: {v?.product_variant_stock ?? 0}</span>
+
                                                         </div>
-                                                        {/* Tombol Restore Varian di Mobile */}
                                                         {isVariantTrashed && !isProductTrashed && (
                                                             <button
                                                                 onClick={() => promptRestoreVariant(v.id)}
                                                                 className="flex items-center gap-1 justify-center bg-emerald-100 text-emerald-700 py-1.5 rounded mt-1 hover:bg-emerald-200 transition-colors font-bold"
                                                             >
-                                                                <RefreshCw size={12} /> Pulihkan Varian
+                                                                <RefreshCw size={12} /> Pulihkan Layanan
                                                             </button>
                                                         )}
                                                     </div>
@@ -316,7 +325,7 @@ export default function ProductTrash() {
                                             onClick={() => promptRestoreProduct(row.id)}
                                             className="w-full flex justify-center items-center gap-2 mt-2 py-2.5 bg-emerald-500 text-white font-bold rounded-lg hover:bg-emerald-600 transition-colors"
                                         >
-                                            <RefreshCw size={16} /> Pulihkan Semua (Produk & Varian)
+                                            <RefreshCw size={16} /> Pulihkan Jasa
                                         </button>
                                     )}
                                 </GlassCard>
