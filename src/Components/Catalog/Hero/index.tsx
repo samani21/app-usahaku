@@ -1,18 +1,38 @@
-import One from './One';
-import Two from './Two';
-import Three from './Three';
-import Four from './Four';
-import Five from './Five';
-import Six from './Six';
-import Sevent from './Sevent';
 import Eight from './Eight';
-import Nine from './Nine';
-import Ten from './Ten';
-import Twelve from './Twelve';
 import Elevent from './Elevent';
-import Thirteen from './Thirteen';
-import Fourteen from './Fourteen';
 import Fifteen from './Fifteen';
+import Five from './Five';
+import Four from './Four';
+import Fourteen from './Fourteen';
+import Nine from './Nine';
+import One from './One';
+import Sevent from './Sevent';
+import Six from './Six';
+import Ten from './Ten';
+import Thirteen from './Thirteen';
+import Three from './Three';
+import Twelve from './Twelve';
+import Two from './Two';
+// ... import lainnya sampai 15
+
+// Buat mapping object komponen
+const HeroComponents: Record<number, React.ElementType> = {
+    1: One,
+    2: Two,
+    3: Three,
+    4: Four,
+    5: Five,
+    6: Six,
+    7: Sevent,
+    8: Eight,
+    9: Nine,
+    10: Ten,
+    11: Elevent,
+    12: Twelve,
+    13: Thirteen,
+    14: Fourteen,
+    15: Fifteen,
+};
 type Props = {
     theme: number;
     isBuild?: boolean;
@@ -25,52 +45,13 @@ type Props = {
 }
 
 const HeroConfig = ({ theme, isBuild, isDarkMode, headline, subHeadline, ctaText, imageHero, title }: Props) => {
+    const commonProps = { isBuild, isDarkMode, headline, subHeadline, ctaText, imageHero, title };
 
-    const commonProps = {
-        isBuild,
-        isDarkMode,
-        headline,
-        subHeadline,
-        ctaText,
-        imageHero,
-        title
-    };
+    // Panggil komponen berdasarkan key (theme)
+    const SelectedHero = HeroComponents[theme];
 
-    /* ===================== Numeric Theme ===================== */
-    switch (theme) {
-        case 1:
-            return <One {...commonProps} />
-        case 2:
-            return <Two {...commonProps} />
-        case 3:
-            return <Three {...commonProps} />
-        case 4:
-            return <Four {...commonProps} />
-        case 5:
-            return <Five {...commonProps} />
-        case 6:
-            return <Six {...commonProps} />
-        case 7:
-            return <Sevent {...commonProps} />
-        case 8:
-            return <Eight {...commonProps} />
-        case 9:
-            return <Nine {...commonProps} />
-        case 10:
-            return <Ten {...commonProps} />
-        case 11:
-            return <Elevent {...commonProps} />
-        case 12:
-            return <Twelve {...commonProps} />
-        case 13:
-            return <Thirteen {...commonProps} />
-        case 14:
-            return <Fourteen {...commonProps} />
-        case 15:
-            return <Fifteen {...commonProps} />
-        default:
-            return null;
-    }
+    // Render komponen jika ada, jika tidak return null
+    return SelectedHero ? <SelectedHero {...commonProps} /> : null;
 }
 
-export default HeroConfig
+export default HeroConfig;

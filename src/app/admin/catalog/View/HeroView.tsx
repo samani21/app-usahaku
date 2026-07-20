@@ -104,12 +104,11 @@ type Props = {
 
 export default function HeroView({ heroData, isDarkMode, setIsDarkMode, getCalog }: Props) {
     const [selectedColor, setSelectedColor] = useState(BUSINESS_THEMES[0].hex);
-    const [activeTab, setActiveTab] = useState<any>();
+    const [activeTab, setActiveTab] = useState<string | undefined>();
     const [heroLayout, setHeroLayout] = useState<number | null>();
     const [displayMode, setDisplayMode] = useState('auto');
     const [showAlert, setShowAlert] = useState<AlertType | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
-
 
     const [title, setTitle] = useState("Rekomendasi Hari Ini");
     const [headline, setHeadline] = useState("PRODUK TERBAIK KAMI");
@@ -124,8 +123,11 @@ export default function HeroView({ heroData, isDarkMode, setIsDarkMode, getCalog
     const [heroFile, setHeroFile] = useState<File | null>(null);
     const [imageHero, setImageHero] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+
     const [isDeleteImage, setIsDeleteImage] = useState<boolean>(false);
-    const [disabelButtonDelete, setDisableButtonDelete] = useState<boolean>(false)
+    // FIX: Penamaan typo diperbaiki jadi disableButtonDelete
+    const [disableButtonDelete, setDisableButtonDelete] = useState<boolean>(false)
+
     useEffect(() => {
         if (heroData) {
             setHeroLayout(heroData?.layout_hero);
@@ -145,8 +147,22 @@ export default function HeroView({ heroData, isDarkMode, setIsDarkMode, getCalog
             if (heroData?.cta) {
                 setCtaText(heroData?.cta ?? '')
             }
-            setDisplayMode(heroData?.mode);
+            setDisplayMode(heroData?.mode ?? 'auto');
             setIsDarkMode(heroData?.mode == 'dark')
+            setDisableButtonDelete(false); // Reset tombol delete
+        } else {
+            // FIX: RESET FORM KE DEFAULT JIKA DATA KOSONG (Misal habis di-delete)
+            setHeroLayout(null);
+            setSelectedColor(BUSINESS_THEMES[0].hex);
+            setImageHero(null);
+            setTitle("Rekomendasi Hari Ini");
+            setHeadline("PRODUK TERBAIK KAMI");
+            setSubHeadline("Kualitas premium dengan harga yang sangat terjangkau khusus untuk Anda.");
+            setCtaText("Pesan Sekarang");
+            setDisplayMode('auto');
+            setIsDarkMode(false);
+            setHeroFile(null);
+            setIsDeleteImage(false);
         }
     }, [heroData]);
 
@@ -170,7 +186,7 @@ export default function HeroView({ heroData, isDarkMode, setIsDarkMode, getCalog
         // 2. Set Secondary Color (Warna Teks/Kontras)
         document.documentElement.style.setProperty('--hero-secondary-color', currentTextColor);
 
-        // 3. Set RGB values untuk kebutuhan transparansi (misal: rgba(var(--hero-primary-rgb), 0.5))
+        // 3. Set RGB values untuk kebutuhan transparansi
         const r = parseInt(selectedColor.slice(1, 3), 16);
         const g = parseInt(selectedColor.slice(3, 5), 16);
         const b = parseInt(selectedColor.slice(5, 7), 16);
@@ -224,20 +240,43 @@ export default function HeroView({ heroData, isDarkMode, setIsDarkMode, getCalog
     const handleSaveCrop = async () => {
         if (imageToCrop && croppedAreaPixels) {
             const { file, url } = await getCroppedImg(imageToCrop, croppedAreaPixels);
+
+            // Bersihkan URL gambar yang lama jika ada untuk mencegah memory leak
+            if (imageHero && imageHero.startsWith('blob:')) {
+                URL.revokeObjectURL(imageHero);
+            }
+
             setImageHero(url);
             setHeroFile(file);
             setShowCropModal(false);
             setImageToCrop(null);
+
+            // FIX: Pastikan status delete false karena user baru saja upload gambar baru!
+            setIsDeleteImage(false);
         }
     };
 
     const handleDelete = async () => {
+        if (!window.confirm('Yakin ingin menghapus Hero Banner ini?')) return;
+
         setLoading(true)
         try {
-            const res = await Delete(`catalog/hero/${heroData?.id}`)
+            await Delete(`client/catalog/hero/${heroData?.id}`)
             setDisableButtonDelete(true)
+            setShowAlert({
+                isOpen: true,
+                type: 'success',
+                message: "Hero berhasil dihapus"
+            })
+            // FIX: Refresh data dari server agar useEffect mengosongkan form
+            getCalog()
         } catch (e: any) {
-
+            setShowAlert({
+                isOpen: true,
+                type: 'error',
+                message: "Gagal menghapus hero"
+            })
+            setDisableButtonDelete(false); // Kembalikan ke false jika gagal
         } finally {
             setLoading(false)
         }
@@ -268,9 +307,9 @@ export default function HeroView({ heroData, isDarkMode, setIsDarkMode, getCalog
             formData.append('mode', displayMode)
             if (isDeleteImage) {
                 formData.append('delete_image', '1')
-
             }
-            const res = await Post('catalog/hero', formData)
+
+            const res = await Post('client/catalog/hero', formData)
             if (res) {
                 setLoading(false);
                 getCalog()
@@ -290,6 +329,7 @@ export default function HeroView({ heroData, isDarkMode, setIsDarkMode, getCalog
             })
         }
     }
+
     return (
         <div>
             {showCropModal && (
@@ -514,7 +554,7 @@ export default function HeroView({ heroData, isDarkMode, setIsDarkMode, getCalog
                                             <button
                                                 onClick={() => {
                                                     setDisplayMode('auto');
-                                                    setIsDarkMode(false); // Atau biarkan sistem mendeteksi
+                                                    setIsDarkMode(false);
                                                 }}
                                                 className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold transition-all ${displayMode === 'auto'
                                                     ? 'bg-white text-slate-800 shadow-sm'
@@ -534,7 +574,7 @@ export default function HeroView({ heroData, isDarkMode, setIsDarkMode, getCalog
                             <div className="flex flex-col sm:flex-row gap-3 pt-2">
                                 {/* Tombol Hapus Seluruh Hero (Fitur Baru) */}
                                 {
-                                    heroData?.id && !disabelButtonDelete &&
+                                    heroData?.id && !disableButtonDelete &&
                                     <button
                                         onClick={handleDelete}
                                         className="flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-semibold rounded-xl border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition-all duration-200"
@@ -558,7 +598,7 @@ export default function HeroView({ heroData, isDarkMode, setIsDarkMode, getCalog
                             <div className="flex overflow-x-auto w-full gap-3 pb-2 no-scrollbar">
                                 {listHero?.map((lh, i) => (
                                     <button
-                                        key={i}
+                                        key={lh?.id}
                                         onClick={() => setHeroLayout(lh?.id)}
                                         className={`whitespace-nowrap text-sm font-medium px-4 py-2.5 rounded-xl flex items-center gap-2.5 transition-all duration-200 border ${lh?.id === heroLayout
                                             ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm'
