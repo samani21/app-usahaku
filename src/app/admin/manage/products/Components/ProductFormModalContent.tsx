@@ -322,7 +322,7 @@ const ProductFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
             setError(newErrors);
             return;
         }
-
+        
         // 2. Prepare FormData
         const formData = new FormData();
         formData.append('name', productData.name);

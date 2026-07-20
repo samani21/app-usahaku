@@ -116,6 +116,7 @@ export interface ProductsType {
     is_recomended?: boolean
     title_recomended?: string,
     color_recomended?: string,
+    deleted_at?: string,
     category?: string,
     is_quantity?: boolean,
     is_service?: boolean,
