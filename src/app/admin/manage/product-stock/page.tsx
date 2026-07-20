@@ -1,12 +1,11 @@
 "use client"
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Edit, Trash2Icon } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight } from 'lucide-react' // Ganti icon biar cocok buat stok in/out
 
 import { Meta } from '@/types/Public'
 import { Get } from '@/utils/Get'
 import { Post } from '@/utils/Post'
-import { Delete } from '@/utils/Delete'
 import { Column } from '@/types/Admin/CRUD'
 import { AlertType } from '@/types/Alert'
 import { ProductStockType } from '@/types/Admin/ProductStockType'
@@ -17,6 +16,7 @@ import ModalCrud from '@/Components/CRUD/ModalCrud'
 import Alert from '@/Components/Alert'
 import CreateOrUpdateProductStock from './Components/CreateOrUpdateProductStock'
 import MainLayout from '@/Components/Layout/MainLayout'
+import GlassCard from '@/Components/Layout/GlassCard' // Tambahan biar tabelnya cakep
 
 const ProductStockComponent = () => {
     // --- FILTER & PAGINATION STATE ---
@@ -40,7 +40,6 @@ const ProductStockComponent = () => {
     // EFFECTS & HELPERS
     // ==========================================
 
-    // 1. Auto-hide Alert dengan Cleanup Timer
     useEffect(() => {
         if (showAlert?.isOpen) {
             const timer = setTimeout(() => {
@@ -50,18 +49,15 @@ const ProductStockComponent = () => {
         }
     }, [showAlert]);
 
-    // 2. Debounce Search
     useEffect(() => {
         const handler = setTimeout(() => setDebouncedSearch(search), 800);
         return () => clearTimeout(handler);
     }, [search]);
 
-    // 3. Reset Halaman ke 1 jika filter berubah
     useEffect(() => {
         setPage(1);
     }, [debouncedSearch, dateRangeText, itemsPerPage]);
 
-    // 4. Parsing Format Tanggal
     const parsedDate = useMemo(() => {
         if (!dateRangeText.includes(" - ")) return { start_date: "", end_date: "" };
 
@@ -80,7 +76,6 @@ const ProductStockComponent = () => {
         return { start_date: formatDate(start), end_date: formatDate(end) };
     }, [dateRangeText]);
 
-    // 5. Query String Builder
     const queryString = useMemo(() => {
         const params = new URLSearchParams();
         params.append("page", page.toString());
@@ -134,9 +129,6 @@ const ProductStockComponent = () => {
         }
     };
 
-    // ==========================================
-    // UI HANDLERS
-    // ==========================================
     const handleResetFilter = () => {
         setSearch("");
         setDateRangeText("");
@@ -150,37 +142,74 @@ const ProductStockComponent = () => {
     // TABLE COLUMNS CONFIG
     // ==========================================
     const columns: Column<ProductStockType>[] = useMemo(() => [
-        { key: "name_outlet", label: "Nama Outlet" },
-        { key: "name_product", label: "Nama Produk" },
+        { key: "name_outlet", label: "Outlet" },
+        {
+            key: "name_product",
+            label: "Nama Produk",
+            render: (row) => <span className="font-semibold text-slate-800">{row.name_product}</span>
+        },
         {
             key: "name_variant",
-            label: "Nama Variant",
-            render: (row) => row?.name_variant ?? '-'
+            label: "Varian",
+            render: (row) => row?.name_variant ? <span className="text-slate-600">{row.name_variant}</span> : <span className="text-slate-400 italic">-</span>
         },
         {
             key: "stock",
-            label: "Stok",
-            render: (row) => row?.stock ?? '0'
+            label: "Qty",
+            align: "center",
+            render: (row) => {
+                // Asumsi backend lu ngirim field `type` ('IN' atau 'OUT') di dalam object ProductStockType
+                // Kalau nggak ada, lu bisa mapping dari reference_type
+                const isOut = row.type === 'OUT' || row.reference_type === 'adjustment'; // Sesuaikan kalau beda
+
+                return (
+                    <div className={`flex items-center justify-center gap-1 font-bold ${isOut ? 'text-rose-600' : 'text-emerald-600'}`}>
+                        {isOut ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
+                        {row.stock}
+                    </div>
+                );
+            }
+        },
+        {
+            key: "reference_type",
+            label: "Tipe Transaksi",
+            align: "center",
+            render: (row) => {
+                let badgeClass = "bg-slate-100 text-slate-600";
+                let label = row.reference_type;
+
+                if (row.reference_type === 'restock') {
+                    badgeClass = "bg-emerald-100 text-emerald-700";
+                    label = "RESTOCK";
+                } else if (row.reference_type === 'adjustment') {
+                    badgeClass = "bg-amber-100 text-amber-700";
+                    label = "ADJUSTMENT";
+                } else if (row.reference_type === 'order') {
+                    badgeClass = "bg-blue-100 text-blue-700";
+                    label = "ORDER";
+                }
+
+                return (
+                    <span className={`px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider rounded-md ${badgeClass}`}>
+                        {label}
+                    </span>
+                );
+            }
         },
         {
             key: "date",
             label: "Tanggal",
-            render: (row) => row?.date ?? '-'
-        },
-        {
-            key: "reference_type",
-            label: "Reference",
-            render: (row) => row?.reference_type ?? '-'
+            render: (row) => <span className="text-sm text-slate-600">{row?.date ?? '-'}</span>
         },
         {
             key: "note",
             label: "Catatan",
-            render: (row) => row?.note ?? '-'
+            render: (row) => row?.note ? <span className="text-sm text-slate-500">{row.note}</span> : <span className="text-slate-300 italic">-</span>
         },
     ], []);
 
     return (
-        <MainLayout page='Kelola Stok Produk'>
+        <MainLayout page='Histori & Kelola Stok'>
             <div className='relative space-y-6'>
                 <FilterComponent
                     search={search}
@@ -194,7 +223,7 @@ const ProductStockComponent = () => {
                     setIsModalOpenForm={setIsModalOpen}
                 />
 
-                <div className="mt-6">
+                <GlassCard className="mt-6 p-2">
                     <DataTable<ProductStockType>
                         data={productStockList}
                         columns={columns}
@@ -206,13 +235,13 @@ const ProductStockComponent = () => {
                         error={error}
                         rowKey={(row) => row.id}
                     />
-                </div>
+                </GlassCard>
 
                 {/* MODALS */}
                 {isModalOpen &&
                     <ModalCrud
                         isOpen={isModalOpen}
-                        title={"Tambah Stok Produk"}
+                        title={"Form Penyesuaian Stok"}
                         onClose={handleCloseModal}
                     >
                         <CreateOrUpdateProductStock

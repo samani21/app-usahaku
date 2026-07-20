@@ -2,7 +2,6 @@
 
 import React, { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
 import { Get } from "@/utils/Get";
-import { ProductStockType } from "@/types/Admin/ProductStockType";
 import { ProductsType } from "@/types/Admin/ProductsType";
 import FormInput from "@/Components/CRUD/FormInput/FormInput";
 import ButtonSubmit from "@/Components/CRUD/FormInput/ButtonSubmit";
@@ -41,8 +40,8 @@ interface FormErrors {
 }
 
 const selectOptions: OptionsType[] = [
-    { label: "Tambah stok", value: 'restock' },
-    { label: "Penyesuaian/Kurangi stok", value: 'adjustment' },
+    { label: "Tambah Stok (In)", value: 'restock' },
+    { label: "Pengurangan Stok (Out)", value: 'adjustment' },
 ];
 
 // ==========================================
@@ -64,7 +63,7 @@ const useOutlets = () => {
                     setOutlets(formatted);
                 }
             } catch (error) {
-                // console.error("Gagal mengambil data outlet:", error);
+                // Handle error gracefully
             }
         };
         fetchOutlets();
@@ -89,8 +88,7 @@ const useProducts = (outletId: string | number, outlets: OptionsType[]) => {
                 const outletLabel = outlets.find((o) => String(o.value) === String(outletId))?.label;
                 if (!outletLabel) return;
 
-                // REFACTOR: Tambahkan parameter is_qty=1 (atau is_stock=1) di sini
-                // agar backend hanya mereturn produk yang stoknya dikelola
+                // Hanya mengambil produk yang is_stock/is_qty nya dikelola
                 const res = await Get<{ success: boolean, data: { data: ProductsType[] } }>(`client/products?limit=10000&outlet=${outletLabel}&is_stock=1`);
 
                 if (res?.success && res.data?.data) {
@@ -101,7 +99,7 @@ const useProducts = (outletId: string | number, outlets: OptionsType[]) => {
                     })));
                 }
             } catch (error) {
-                // console.error("Gagal mengambil data produk:", error);
+                // Handle error gracefully
             }
         };
 
@@ -115,7 +113,6 @@ const useProducts = (outletId: string | number, outlets: OptionsType[]) => {
 // MAIN COMPONENT
 // ==========================================
 const CreateOrUpdateProductStock = ({ handleFormSubmit, loading, setLoading, onCancel }: Props) => {
-    // 1. Inisialisasi State (Langsung dari data update jika ada)
     const [form, setForm] = useState<FormState>({
         outlet_id: "",
         product_id: "",
@@ -128,18 +125,16 @@ const CreateOrUpdateProductStock = ({ handleFormSubmit, loading, setLoading, onC
 
     const [error, setError] = useState<FormErrors>({});
 
-    // 2. Mengambil data Options dari Custom Hooks
     const { outlets } = useOutlets();
     const { products, productOptions } = useProducts(form.outlet_id, outlets);
 
-    // Auto-select Outlet jika hanya ada 1 dan sedang dalam mode "Create"
+    // Auto-select Outlet
     useEffect(() => {
         if (outlets.length === 1 && !form.outlet_id) {
             setForm((prev) => ({ ...prev, outlet_id: outlets[0].value }));
         }
     }, [outlets, form.outlet_id]);
 
-    // 3. Handlers & Computed Values
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
     ) => {
@@ -151,7 +146,6 @@ const CreateOrUpdateProductStock = ({ handleFormSubmit, loading, setLoading, onC
             [name]: type === "file" && files ? files[0] : value,
         }));
 
-        // Hapus pesan error saat user mengetik
         if (error[name as keyof FormErrors]) {
             setError((prev) => ({ ...prev, [name]: null }));
         }
@@ -173,7 +167,6 @@ const CreateOrUpdateProductStock = ({ handleFormSubmit, loading, setLoading, onC
         if (product?.has_variant && !product?.is_shared_stock) {
             return product?.variants?.find((v) => String(v?.id) === String(form.product_variant_id))?.product_variant_stock ?? 0;
         }
-
         return product?.product_stock ?? 0
     }, [product?.product_stock, product?.variants, product?.has_variant, product?.is_shared_stock, form?.product_variant_id])
 
@@ -184,12 +177,15 @@ const CreateOrUpdateProductStock = ({ handleFormSubmit, loading, setLoading, onC
         } else {
             currentStock = Number(product?.product_stock || 0);
         }
+
         const inputStock = Number(form.stock || 0);
 
         if (form.reference_type === 'restock') {
             return currentStock + inputStock;
+        } else if (form.reference_type === 'adjustment') {
+            return currentStock - inputStock;
         }
-        return currentStock - inputStock;
+        return currentStock;
     }, [product?.product_stock, product?.variants, product?.has_variant, product?.is_shared_stock, form.stock, form.reference_type, form?.product_variant_id]);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -200,31 +196,31 @@ const CreateOrUpdateProductStock = ({ handleFormSubmit, loading, setLoading, onC
         let hasError = false;
 
         if (!form.outlet_id || form.outlet_id === "undefined") {
-            newErrors.outlet_id = "Outlet harus diisi";
+            newErrors.outlet_id = "Cabang outlet harus dipilih";
             hasError = true;
         }
         if (!form.product_id) {
-            newErrors.product_id = "Product harus diisi";
+            newErrors.product_id = "Produk harus dipilih";
             hasError = true;
         }
         if (!form.date) {
-            newErrors.date = "Tanggal harus diisi";
+            newErrors.date = "Tanggal transaksi harus diisi";
             hasError = true;
         }
         if (variantOptions.length > 0 && !form.product_variant_id && !product?.is_shared_stock) {
-            newErrors.product_variant_id = "Variant harus diisi";
+            newErrors.product_variant_id = "Varian produk harus dipilih";
             hasError = true;
         }
         if (!form.reference_type) {
-            newErrors.reference_type = "Reference harus diisi";
+            newErrors.reference_type = "Tipe transaksi harus dipilih";
             hasError = true;
         }
-        if (!form.stock) {
-            newErrors.stock = "Stock harus diisi";
+        if (!form.stock || Number(form.stock) <= 0) {
+            newErrors.stock = "Kuantitas stok tidak valid";
             hasError = true;
         }
         if (totalStock < 0) {
-            newErrors.stock = "Kuantitas tidak boleh melebihi stok saat ini.";
+            newErrors.stock = "Kuantitas pengurangan melebihi stok saat ini!";
             hasError = true;
         }
 
@@ -233,12 +229,10 @@ const CreateOrUpdateProductStock = ({ handleFormSubmit, loading, setLoading, onC
             return;
         }
 
-        // --- PROSES SUBMIT ---
         setLoading(true);
         try {
             const formData = new FormData();
             Object.entries(form).forEach(([key, val]) => {
-                // Hindari mengirim data kosong/null
                 if (val !== null && val !== undefined && val !== "") {
                     formData.append(key, String(val));
                 }
@@ -246,8 +240,7 @@ const CreateOrUpdateProductStock = ({ handleFormSubmit, loading, setLoading, onC
 
             await handleFormSubmit(formData);
         } catch (err) {
-            // console.error("Gagal memproses data stok produk:", err);
-            setLoading(false); // Pastikan loading mati jika error catch blok ini aktif
+            setLoading(false);
         }
     };
 
@@ -255,7 +248,7 @@ const CreateOrUpdateProductStock = ({ handleFormSubmit, loading, setLoading, onC
         <form onSubmit={handleSubmit} className="space-y-6">
             <FormInput
                 type="autocomplete"
-                label="Cabang"
+                label="Cabang (Outlet)"
                 name="outlet_id"
                 value={form.outlet_id}
                 onChange={handleChange}
@@ -265,7 +258,7 @@ const CreateOrUpdateProductStock = ({ handleFormSubmit, loading, setLoading, onC
 
             <FormInput
                 type="autocomplete"
-                label="Produk"
+                label="Pilih Produk"
                 name="product_id"
                 value={form.product_id}
                 onChange={handleChange}
@@ -277,7 +270,7 @@ const CreateOrUpdateProductStock = ({ handleFormSubmit, loading, setLoading, onC
             {variantOptions.length > 0 && !product?.is_shared_stock && (
                 <FormInput
                     type="autocomplete"
-                    label="Produk Variant"
+                    label="Pilih Varian"
                     name="product_variant_id"
                     value={form.product_variant_id}
                     onChange={handleChange}
@@ -286,75 +279,82 @@ const CreateOrUpdateProductStock = ({ handleFormSubmit, loading, setLoading, onC
                 />
             )}
 
-            <FormInput
-                type="date"
-                label="Tanggal"
-                name="date"
-                value={form.date}
-                onChange={handleChange}
-                error={error.date ?? ''}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormInput
+                    type="date"
+                    label="Tanggal Transaksi"
+                    name="date"
+                    value={form.date}
+                    onChange={handleChange}
+                    error={error.date ?? ''}
+                />
 
-            <FormInput
-                type="select"
-                label="Jenis Penyesuaian"
-                name="reference_type"
-                value={form.reference_type}
-                onChange={handleChange}
-                options={selectOptions}
-                error={error.reference_type ?? ''}
-            />
+                <FormInput
+                    type="select"
+                    label="Jenis Penyesuaian"
+                    name="reference_type"
+                    value={form.reference_type}
+                    onChange={handleChange}
+                    options={selectOptions}
+                    error={error.reference_type ?? ''}
+                />
+            </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-start gap-4 p-4 bg-slate-50 border border-slate-200 rounded-xl">
                 <div className="w-full">
                     <FormInput
                         type="number"
                         label="Stok Saat Ini"
-                        name="" // Dikosongkan karena tidak masuk ke FormState
+                        name=""
                         value={stockNow}
                         onChange={() => { }}
-                        placeholder="Type number"
+                        placeholder="0"
                         disabled={true}
                     />
-                    {/* Placeholder space jika kolom Kuantitas memiliki error */}
-                    {(error.stock) && <div className="h-5 mt-1"></div>}
                 </div>
 
-                <FormInput
-                    type="number"
-                    label="Kuantitas"
-                    name="stock"
-                    value={form.stock}
-                    onChange={handleChange}
-                    placeholder="Type number"
-                    error={error.stock ?? ''}
-                    disabled={!form.reference_type}
-                />
-            </div>
+                <div className="w-full">
+                    <FormInput
+                        type="number"
+                        label="Kuantitas (Qty)"
+                        name="stock"
+                        value={form.stock}
+                        onChange={handleChange}
+                        placeholder="Misal: 10"
+                        error={error.stock ?? ''}
+                        disabled={!form.reference_type}
+                    />
+                </div>
 
-            <FormInput
-                type="number"
-                label="Estimasi Stok Akhir"
-                name=""
-                value={totalStock}
-                onChange={() => { }}
-                placeholder="Type number"
-                disabled={true}
-                error={totalStock < 0 ? 'Jumlah tidak boleh lebih besar dari stok saat ini.' : ''}
-            />
+                <div className="w-full">
+                    <FormInput
+                        type="number"
+                        label="Estimasi Akhir"
+                        name=""
+                        value={totalStock}
+                        onChange={() => { }}
+                        placeholder="0"
+                        disabled={true}
+                        error={totalStock < 0 ? 'Stok tidak cukup' : ''}
+                    />
+                </div>
+            </div>
 
             {form.reference_type === 'adjustment' && (
                 <FormInput
                     type="textarea"
-                    label="Catatan"
+                    label="Catatan Pengurangan Stok"
                     name="note"
                     value={form.note}
                     onChange={handleChange}
                     error={error.note ?? ''}
+                    placeholder="Contoh: Barang kedaluwarsa, rusak, dll..."
                 />
             )}
 
-            <ButtonSubmit onClose={onCancel} isSubmitting={loading} />
+            <div className="pt-2">
+                <ButtonSubmit onClose={onCancel} isSubmitting={loading} />
+            </div>
         </form>
     );
 };
