@@ -13,6 +13,10 @@ type Props = {
 }
 
 const FourTeen = ({ isDarkMode, isBuild, totalCart, summary, selectedOutlet }: Props) => {
+    // SOP 4: Antisipasi Error (Edge Case)
+    // Sembunyikan dock melengkung ini jika belum ada item di keranjang
+    if (totalCart < 1) return null;
+
     return (
         // Wrapper luar dengan z-index tinggi
         <div className="sticky bottom-0 z-50 w-full pointer-events-none">
@@ -39,16 +43,16 @@ const FourTeen = ({ isDarkMode, isBuild, totalCart, summary, selectedOutlet }: P
                     </p>
                 </div>
 
-                {/* Bagian Kanan: Tombol Beli High-Contrast */}
+                {/* Bagian Kanan: Tombol Beli dengan Proteksi YIQ & Warna Merek */}
                 <HandleCheckout
                     selectedOutlet={selectedOutlet}
                     isBuild={isBuild}
                     className={`
                         group relative flex items-center gap-2.5 px-8 py-3.5 rounded-[20px] font-bold text-sm tracking-wide
                         transition-all duration-300 hover:scale-105 active:scale-95
-                        ${isDarkMode
-                            ? "bg-white text-black shadow-[0_10px_20px_rgba(255,255,255,0.15)] hover:bg-slate-200"
-                            : "bg-slate-900 text-white shadow-[0_10px_20px_rgba(0,0,0,0.15)] hover:bg-slate-800"}
+                        bg-[var(--summary-primary-color)] 
+                        text-[var(--summary-secondary-color)] /* Mengamankan kontras via YIQ */
+                        shadow-lg shadow-[var(--summary-primary-color)]/30
                     `}
                 >
                     <span>Beli</span>

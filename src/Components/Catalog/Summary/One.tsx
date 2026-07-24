@@ -13,18 +13,22 @@ type Props = {
 }
 
 const One = ({ isDarkMode, totalCart, summary, isBuild, selectedOutlet }: Props) => {
+    // SOP 4: Antisipasi Error (Edge Case) 
+    // Sembunyikan pill summary sepenuhnya jika keranjang masih kosong.
+    if (totalCart < 1) return null;
+
     return (
         // Wrapper luar untuk posisi sticky & z-index agar selalu di atas
         <div className="sticky bottom-6 z-50 px-4 w-full max-w-md mx-auto">
-            
+
             {/* Main Pill Container - Glassmorphism Effect */}
             <div className={`
                 relative flex items-center justify-between p-2 pl-6 rounded-full shadow-2xl backdrop-blur-xl border transition-colors duration-300
-                ${isDarkMode 
-                    ? "bg-[#121212]/70 border-white/10 shadow-black/60" 
+                ${isDarkMode
+                    ? "bg-[#121212]/70 border-white/10 shadow-black/60"
                     : "bg-white/80 border-slate-200/50 shadow-slate-300/50"}
             `}>
-                
+
                 {/* Efek gradien tipis di dalam pill (Opsional untuk kesan premium) */}
                 <div className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent to-[var(--summary-primary-color)]/5 pointer-events-none" />
 
@@ -39,24 +43,25 @@ const One = ({ isDarkMode, totalCart, summary, isBuild, selectedOutlet }: Props)
                 </div>
 
                 {/* Tombol Checkout */}
-                <HandleCheckout 
-                    selectedOutlet={selectedOutlet} 
-                    isBuild={isBuild} 
+                <HandleCheckout
+                    selectedOutlet={selectedOutlet}
+                    isBuild={isBuild}
                     className={`
                         group relative flex items-center justify-center h-12 w-12 rounded-full overflow-hidden transition-all duration-300
-                        bg-[var(--summary-primary-color)] text-white 
+                        bg-[var(--summary-primary-color)] 
+                        text-[var(--summary-secondary-color)] /* Mengamankan kontras via rumus YIQ agar tidak nabrak */
                         hover:scale-105 active:scale-95 
                         shadow-lg shadow-[var(--summary-primary-color)]/40
                     `}
                 >
                     {/* Panah dengan animasi geser saat di-hover */}
-                    <ArrowRight 
-                        size={20} 
-                        strokeWidth={2.5} 
-                        className="transform transition-transform duration-300 group-hover:translate-x-1" 
+                    <ArrowRight
+                        size={20}
+                        strokeWidth={2.5}
+                        className="transform transition-transform duration-300 group-hover:translate-x-1"
                     />
                 </HandleCheckout>
-                
+
             </div>
         </div>
     );

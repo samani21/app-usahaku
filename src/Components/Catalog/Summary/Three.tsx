@@ -13,8 +13,13 @@ type Props = {
 }
 
 const Three = ({ isDarkMode, totalCart, summary, isBuild, selectedOutlet }: Props) => {
+    // SOP 4: Antisipasi Error (Edge Case)
+    // Jangan tampilkan gelembung (bubble) jika keranjang kosong
+    if (totalCart < 1) return null;
+
     return (
         // Wrapper luar untuk menahan posisi di kanan bawah dengan z-index tinggi
+        // Menggunakan pointer-events-none agar area kosong di kiri tombol tidak menghalangi klik ke layar utama
         <div className="sticky bottom-10 z-50 flex justify-end px-4 md:px-8 w-full pointer-events-none">
 
             {/* Inner Container: Pointer events diaktifkan kembali di sini */}
@@ -27,7 +32,9 @@ const Three = ({ isDarkMode, totalCart, summary, isBuild, selectedOutlet }: Prop
 
                 {/* Bagian Teks (Rata Kanan) */}
                 <div className="flex flex-col text-right justify-center">
-                    <p className={`text-[11px] font-extrabold tracking-widest uppercase mb-0.5 ${isDarkMode ? "text-slate-400" : "text-[var(--summary-primary-color)]"
+                    <p className={`text-[11px] font-extrabold tracking-widest uppercase mb-0.5 ${
+                            // Menggunakan slate agar aman dibaca di light mode, menghindari warna primary yang terlalu terang
+                            isDarkMode ? "text-slate-400" : "text-slate-500"
                         }`}>
                         Total ({totalCart})
                     </p>
@@ -43,7 +50,8 @@ const Three = ({ isDarkMode, totalCart, summary, isBuild, selectedOutlet }: Prop
                     isBuild={isBuild}
                     className={`
                         group relative flex items-center justify-center w-12 h-12 rounded-full overflow-hidden transition-all duration-300
-                        bg-[var(--summary-primary-color)] text-white
+                        bg-[var(--summary-primary-color)] 
+                        text-[var(--summary-secondary-color)] /* Menggunakan rumus YIQ agar ikon tidak nabrak warna background */
                         hover:scale-105 active:scale-95 shadow-md shadow-[var(--summary-primary-color)]/30
                     `}
                 >

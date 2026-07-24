@@ -1,19 +1,25 @@
-import One from './One';
-import Two from './Two';
-import Three from './Three';
-import Four from './Four';
-import Five from './Five';
-import Six from './Six';
-import Sevent from './Sevent';
-import Eight from './Eight';
-import Nine from './Nine';
-import Ten from './Ten';
-import Elevent from './Elevent';
-import Twelve from './Twelve';
-import ThirTeen from './ThirTeen';
-import FourTeen from './FourTeen';
-import FiveTeen from './FiveTeen';
+import dynamic from 'next/dynamic';
 import { OutletsType } from '@/types/Admin/OutletType';
+
+// SOP 3: Lazy Loading (Dynamic Import) - Membasmi loading lambat!
+// Hanya layout yang dipilih yang akan di-download oleh browser user.
+const Layouts: Record<number, any> = {
+    1: dynamic(() => import('./One')),
+    2: dynamic(() => import('./Two')),
+    3: dynamic(() => import('./Three')),
+    4: dynamic(() => import('./Four')),
+    5: dynamic(() => import('./Five')),
+    6: dynamic(() => import('./Six')),
+    7: dynamic(() => import('./Sevent')),
+    8: dynamic(() => import('./Eight')),
+    9: dynamic(() => import('./Nine')),
+    10: dynamic(() => import('./Ten')),
+    11: dynamic(() => import('./Elevent')),
+    12: dynamic(() => import('./Twelve')),
+    13: dynamic(() => import('./ThirTeen')),
+    14: dynamic(() => import('./FourTeen')),
+    15: dynamic(() => import('./FiveTeen')),
+};
 
 type Props = {
     theme: number | null;
@@ -21,51 +27,15 @@ type Props = {
     totalCart: number;
     isBuild?: boolean;
     summary: number;
-    selectedOutlet: OutletsType | null
-}
+    selectedOutlet: OutletsType | null;
+};
 
-const SummaryConfig = ({ theme, isDarkMode, totalCart, summary, isBuild, selectedOutlet }: Props) => {
-    const componenst = {
-        isDarkMode,
-        totalCart,
-        summary,
-        isBuild,
-        selectedOutlet
-    }
-    switch (theme) {
-        case 1:
-            return <One {...componenst} />;
-        case 2:
-            return <Two {...componenst} />;
-        case 3:
-            return <Three {...componenst} />;
-        case 4:
-            return <Four {...componenst} />;
-        case 5:
-            return <Five {...componenst} />;
-        case 6:
-            return <Six {...componenst} />;
-        case 7:
-            return <Sevent {...componenst} />;
-        case 8:
-            return <Eight {...componenst} />;
-        case 9:
-            return <Nine {...componenst} />;
-        case 10:
-            return <Ten {...componenst} />;
-        case 11:
-            return <Elevent {...componenst} />;
-        case 12:
-            return <Twelve {...componenst} />;
-        case 13:
-            return <ThirTeen {...componenst} />;
-        case 14:
-            return <FourTeen {...componenst} />;
-        case 15:
-            return <FiveTeen {...componenst} />;
-        default:
-            return null;
-    }
-}
+const SummaryConfig = (props: Props) => {
+    // SOP 4: Fallback jika theme tidak valid atau null
+    if (!props.theme || !Layouts[props.theme]) return null;
 
-export default SummaryConfig
+    const Component = Layouts[props.theme];
+    return <Component {...props} />;
+};
+
+export default SummaryConfig;

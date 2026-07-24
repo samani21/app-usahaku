@@ -12,6 +12,10 @@ type Props = {
 }
 
 const Four = ({ isDarkMode, isBuild, totalCart, summary, selectedOutlet }: Props) => {
+    // SOP 4: Antisipasi Error (Edge Case)
+    // Sembunyikan panel ini jika keranjang belanja masih kosong
+    if (totalCart < 1) return null;
+
     return (
         // Wrapper untuk membatasi lebar maksimal dan mengatur z-index
         <div className="sticky bottom-6 z-50 px-4 w-full max-w-lg mx-auto">
@@ -53,7 +57,8 @@ const Four = ({ isDarkMode, isBuild, totalCart, summary, selectedOutlet }: Props
                         className={`
                             bg-gradient-to-r from-[var(--summary-primary-color)] to-[var(--summary-primary-color)]/80 
                             hover:to-[var(--summary-primary-color)] 
-                            text-white px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest 
+                            text-[var(--summary-secondary-color)] /* Mengamankan kontras via rumus YIQ */
+                            px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest 
                             transition-all duration-300 hover:scale-105 active:scale-95 shadow-md
                         `}
                     >

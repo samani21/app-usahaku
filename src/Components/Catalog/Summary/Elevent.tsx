@@ -12,6 +12,10 @@ type Props = {
 }
 
 const Elevent = ({ isDarkMode, isBuild, totalCart, summary, selectedOutlet }: Props) => {
+    // SOP 4: Antisipasi Error (Edge Case)
+    // Sembunyikan tombol raksasa ini sepenuhnya jika tidak ada barang di keranjang
+    if (totalCart < 1) return null;
+
     return (
         // Wrapper dengan z-index dan max-width untuk proporsi yang baik di semua layar
         <div className="sticky bottom-6 z-50 px-4 w-full max-w-lg mx-auto pointer-events-none">
@@ -40,7 +44,7 @@ const Elevent = ({ isDarkMode, isBuild, totalCart, summary, selectedOutlet }: Pr
 
                 {/* Bagian Kanan: Pemisah & Harga */}
                 <div className="relative z-10 flex items-center gap-4">
-                    {/* Garis Pemisah (Divider) */}
+                    {/* Garis Pemisah (Divider) yang otomatis menyesuaikan warna */}
                     <div className="w-[1.5px] h-6 bg-[var(--summary-secondary-color)]/30 rounded-full" />
 
                     {/* Harga */}

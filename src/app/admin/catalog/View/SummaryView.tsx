@@ -101,9 +101,9 @@ type Props = {
 }
 export default function SummaryView({ summaryData, isDarkMode, setIsDarkMode, getCalog }: Props) {
     const [selectedColor, setSelectedColor] = useState(BUSINESS_THEMES[0].hex);
-    const [activeTab, setActiveTab] = useState<any>();
+    const [activeTab, setActiveTab] = useState<string | null>(null);
+    const [displayMode, setDisplayMode] = useState<'light' | 'dark' | 'auto'>('auto');
     const [summaryLayout, setSummaryLayout] = useState<number | null>(null);
-    const [displayMode, setDisplayMode] = useState('auto');
     const [showAlert, setShowAlert] = useState<AlertType | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     useEffect(() => {
@@ -112,7 +112,7 @@ export default function SummaryView({ summaryData, isDarkMode, setIsDarkMode, ge
             if (summaryData?.color) {
                 setSelectedColor(summaryData?.color);
             }
-            setDisplayMode(summaryData?.mode);
+            setDisplayMode(summaryData?.mode as 'light' | 'dark' | 'auto');
             setIsDarkMode(summaryData?.mode == 'dark');
         }
     }, [summaryData]);
@@ -148,41 +148,48 @@ export default function SummaryView({ summaryData, isDarkMode, setIsDarkMode, ge
     }, [selectedColor, currentTextColor]);
 
     const handleSubmit = async () => {
+        // SOP 1: UX Mulus - Cegah double submit
+        if (loading) return;
+
         try {
             setLoading(true);
+
             if (!summaryLayout) {
-                setLoading(false);
                 setShowAlert({
                     isOpen: true,
                     type: 'error',
-                    message: "Harap pilih salah satu summary dibawah"
-                })
+                    message: "Harap pilih salah satu layout summary di bawah."
+                });
                 return;
             }
+
             const formData = new FormData();
-            formData.append('layout_summary', String(summaryLayout))
-            formData.append('color', selectedColor)
-            formData.append('mode', displayMode)
-            const res = await Post('catalog/summary', formData)
+            formData.append('layout_summary', String(summaryLayout));
+            formData.append('color', selectedColor);
+            formData.append('mode', displayMode);
+
+            const res = await Post('client/catalog/summary', formData);
+
             if (res) {
-                setLoading(false);
-                getCalog()
+                getCalog();
                 setShowAlert({
                     isOpen: true,
                     type: 'success',
-                    message: "Pengaturan summary berhasil disimpan"
-                })
+                    message: "Pengaturan tampilan berhasil disimpan!"
+                });
             }
-
-        } catch (e: any) {
-            setLoading(false);
+        } catch (e: unknown) {
+            // SOP 4: Fallback perlindungan jika API mati/network error
             setShowAlert({
                 isOpen: true,
                 type: 'error',
-                message: "Pengaturan summary gagal disimpan"
-            })
+                message: "Koneksi terputus atau server sedang sibuk. Silakan coba lagi."
+            });
+        } finally {
+            // Pastikan loading selalu berhenti meskipun sukses/gagal
+            setLoading(false);
         }
-    }
+    };
     return (
         <div>
             <div className={`${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
@@ -297,9 +304,14 @@ export default function SummaryView({ summaryData, isDarkMode, setIsDarkMode, ge
                                     <div className="flex-1 w-full">
                                         <button
                                             onClick={handleSubmit}
-                                            className="w-full flex items-center justify-center gap-2 py-3.5 px-4 text-sm bg-emerald-600 text-white font-semibold rounded-xl shadow-md hover:bg-emerald-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+                                            disabled={loading} // SOP 1: Kunci tombol saat loading
+                                            className={`w-full flex items-center justify-center gap-2 py-3.5 px-4 text-sm font-semibold rounded-xl shadow-md transition-all duration-200 ${loading
+                                                ? 'bg-emerald-400 cursor-not-allowed text-white/70'
+                                                : 'bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-lg hover:-translate-y-0.5'
+                                                }`}
                                         >
-                                            <Check className="w-5 h-5" /> Simpan Perubahan
+                                            <Check className="w-5 h-5" />
+                                            {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
                                         </button>
                                     </div>
                                 </div>

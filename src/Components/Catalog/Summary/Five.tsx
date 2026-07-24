@@ -13,6 +13,10 @@ type Props = {
 }
 
 const Five = ({ isDarkMode, isBuild, totalCart, summary, selectedOutlet }: Props) => {
+    // SOP 4: Antisipasi Error (Edge Case)
+    // Sembunyikan panel ini secara keseluruhan jika keranjang kosong
+    if (totalCart < 1) return null;
+
     return (
         // Wrapper luar dengan z-index tinggi
         <div className="sticky bottom-0 z-50 w-full md:px-4 md:pb-4 pointer-events-none">
@@ -31,14 +35,16 @@ const Five = ({ isDarkMode, isBuild, totalCart, summary, selectedOutlet }: Props
                 {/* Bagian Kiri: Info Cart */}
                 <div className="flex items-center gap-4">
                     {/* Ikon Keranjang dengan background memutar */}
-                    <div className={`flex items-center justify-center w-11 h-11 rounded-full ${isDarkMode ? "bg-white/10" : "bg-slate-100"
+                    <div className={`flex items-center justify-center w-11 h-11 rounded-full ${
+                            isDarkMode ? "bg-white/10" : "bg-slate-100"
                         }`}>
                         <ShoppingBag size={20} className={isDarkMode ? "text-slate-300" : "text-slate-600"} />
                     </div>
 
                     {/* Detail Harga & Item */}
                     <div className="flex flex-col">
-                        <p className={`text-[11px] font-semibold uppercase tracking-wider mb-0.5 ${isDarkMode ? "text-slate-400" : "text-slate-500"
+                        <p className={`text-[11px] font-semibold uppercase tracking-wider mb-0.5 ${
+                                isDarkMode ? "text-slate-400" : "text-slate-500"
                             }`}>
                             {totalCart} Item Terpilih
                         </p>
@@ -48,19 +54,20 @@ const Five = ({ isDarkMode, isBuild, totalCart, summary, selectedOutlet }: Props
                     </div>
                 </div>
 
-                {/* Bagian Kanan: Tombol Checkout dengan Ikon Zap */}
+                {/* Bagian Kanan: Tombol Checkout dengan warna Branding & Aman (YIQ) */}
                 <HandleCheckout
                     selectedOutlet={selectedOutlet}
                     isBuild={isBuild}
                     className={`
                         group flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold tracking-wide
                         transition-all duration-300 hover:scale-105 active:scale-95
-                        ${isDarkMode
-                            ? "bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:bg-slate-200"
-                            : "bg-slate-900 text-white shadow-[0_0_20px_rgba(0,0,0,0.15)] hover:bg-slate-800"}
+                        bg-[var(--summary-primary-color)] 
+                        text-[var(--summary-secondary-color)] /* Mengamankan kontras via YIQ */
+                        shadow-lg shadow-[var(--summary-primary-color)]/30
                     `}
                 >
-                    <Zap size={16} className={`${isDarkMode ? "text-black" : "text-yellow-400"} fill-current`} />
+                    {/* Zap Icon mewarisi warna kontras dari rumus YIQ */}
+                    <Zap size={16} className="text-[var(--summary-secondary-color)] fill-current" />
                     <span>Checkout</span>
                 </HandleCheckout>
 

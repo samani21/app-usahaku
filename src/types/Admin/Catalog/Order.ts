@@ -7,6 +7,7 @@ export interface OrderType {
     created_at: string;
     customer_name: string;
     device_id: number;
+    discount_amount: number;
     grand_total: number;
     id: number;
     order_number: string;

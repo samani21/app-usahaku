@@ -13,6 +13,10 @@ type Props = {
 }
 
 const Two = ({ isDarkMode, totalCart, summary, isBuild, selectedOutlet }: Props) => {
+    // SOP 4: Antisipasi Error (Edge Case)
+    // Sembunyikan bar bagian bawah sepenuhnya jika keranjang masih kosong
+    if (totalCart < 1) return null;
+
     return (
         // Wrapper luar dengan z-index tinggi dan shadow arah atas
         <div className={`sticky bottom-0 z-50 w-full backdrop-blur-xl border-t transition-all duration-300 ${isDarkMode
@@ -29,8 +33,8 @@ const Two = ({ isDarkMode, totalCart, summary, isBuild, selectedOutlet }: Props)
                         }`}>
                         <ShoppingBag size={22} strokeWidth={2} />
 
-                        {/* Badge cart dengan border dinamis untuk efek "Cutout" */}
-                        <span className={`absolute -top-1.5 -right-1.5 bg-[var(--summary-primary-color)] text-white text-[10px] font-bold min-w-[22px] h-[22px] rounded-full flex items-center justify-center px-1 border-2 ${isDarkMode ? "border-[#121212]" : "border-white"
+                        {/* Badge cart dengan text dinamis (YIQ) dan border untuk efek "Cutout" */}
+                        <span className={`absolute -top-1.5 -right-1.5 bg-[var(--summary-primary-color)] text-[var(--summary-secondary-color)] text-[10px] font-bold min-w-[22px] h-[22px] rounded-full flex items-center justify-center px-1 border-2 ${isDarkMode ? "border-[#121212]" : "border-white"
                             } shadow-sm`}>
                             {totalCart}
                         </span>
@@ -47,17 +51,16 @@ const Two = ({ isDarkMode, totalCart, summary, isBuild, selectedOutlet }: Props)
                     </div>
                 </div>
 
-                {/* Tombol Checkout High-Contrast */}
+                {/* Tombol Checkout dengan warna Branding (Primary) & Kontras Aman (YIQ) */}
                 <HandleCheckout
                     selectedOutlet={selectedOutlet}
                     isBuild={isBuild}
                     className={`
                         group relative overflow-hidden rounded-xl px-6 py-3 font-semibold text-sm transition-all duration-300
                         hover:scale-[1.02] active:scale-95
-                        ${isDarkMode
-                            ? "bg-white text-black hover:bg-slate-200"
-                            : "bg-slate-900 text-white hover:bg-slate-800 shadow-lg shadow-slate-900/20"
-                        }
+                        bg-[var(--summary-primary-color)] 
+                        text-[var(--summary-secondary-color)] 
+                        shadow-lg shadow-[var(--summary-primary-color)]/20
                     `}
                 >
                     Checkout

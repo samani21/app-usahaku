@@ -12,6 +12,10 @@ type Props = {
 }
 
 const FiveTeen = ({ isDarkMode, isBuild, summary, totalCart, selectedOutlet }: Props) => {
+    // SOP 4: Antisipasi Error (Edge Case)
+    // Sembunyikan panel secara penuh jika belum ada item yang dimasukkan
+    if (totalCart < 1) return null;
+
     return (
         // Wrapper luar dengan z-index dan batas max-width agar proporsional
         <div className="sticky bottom-6 z-50 px-4 w-full max-w-md mx-auto pointer-events-none">
@@ -29,23 +33,26 @@ const FiveTeen = ({ isDarkMode, isBuild, summary, totalCart, selectedOutlet }: P
                     flex-1 px-6 py-4 flex flex-col justify-center backdrop-blur-xl transition-colors
                     ${isDarkMode ? "bg-[#18181b]/95" : "bg-white/95"}
                 `}>
-                    <p className={`text-[11px] font-extrabold uppercase tracking-widest mb-0.5 ${isDarkMode ? "text-slate-400" : "text-slate-500"
+                    <p className={`text-[11px] font-extrabold uppercase tracking-widest mb-0.5 ${
+                            isDarkMode ? "text-slate-400" : "text-slate-500"
                         }`}>
                         Total Tagihan
                     </p>
-                    <p className={`text-xl font-black tracking-tight leading-none ${isDarkMode ? "text-white" : "text-slate-900"
+                    <p className={`text-xl font-black tracking-tight leading-none ${
+                            isDarkMode ? "text-white" : "text-slate-900"
                         }`}>
                         {formatIDR(summary)}
                     </p>
                 </div>
 
-                {/* Panel Kanan: Tombol Checkout Menempel Penuh */}
+                {/* Panel Kanan: Tombol Checkout Menempel Penuh dengan Proteksi YIQ */}
                 <HandleCheckout
                     selectedOutlet={selectedOutlet}
                     isBuild={isBuild}
                     className={`
                         group relative flex items-center justify-center px-6 sm:px-8
-                        bg-[var(--summary-primary-color)] text-white 
+                        bg-[var(--summary-primary-color)] 
+                        text-[var(--summary-secondary-color)] /* Mengamankan kontras tulisan dengan YIQ */
                         font-black uppercase tracking-widest text-xs italic
                         transition-all duration-300 
                         hover:brightness-110 active:brightness-95
@@ -56,8 +63,8 @@ const FiveTeen = ({ isDarkMode, isBuild, summary, totalCart, selectedOutlet }: P
                         Checkout ({totalCart})
                     </span>
 
-                    {/* Efek kilauan halus (opsional) */}
-                    <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-300 pointer-events-none" />
+                    {/* Efek kilauan adaptif yang cerdas (mengikuti warna teks YIQ saat ini) */}
+                    <div className="absolute inset-0 bg-transparent group-hover:bg-current opacity-10 transition-colors duration-300 pointer-events-none" />
                 </HandleCheckout>
 
             </div>

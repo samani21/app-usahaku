@@ -12,6 +12,10 @@ type Props = {
 }
 
 const Eight = ({ isDarkMode, isBuild, totalCart, summary, selectedOutlet }: Props) => {
+    // SOP 4: Antisipasi Error (Edge Case)
+    // Sembunyikan Elevated Card ini jika keranjang belanja masih kosong
+    if (totalCart < 1) return null;
+
     return (
         // Wrapper luar dengan z-index untuk menjaga posisi tetap di atas
         <div className="sticky bottom-6 z-50 px-4 w-full max-w-2xl mx-auto pointer-events-none">
@@ -27,7 +31,7 @@ const Eight = ({ isDarkMode, isBuild, totalCart, summary, selectedOutlet }: Prop
                 {/* Bagian Kiri: Indikator Kotak & Harga */}
                 <div className="flex items-center gap-4">
                     
-                    {/* Blocky Item Counter */}
+                    {/* Blocky Item Counter - Warnanya netral dan berani */}
                     <div className={`
                         flex flex-col items-center justify-center w-12 h-12 rounded-[18px] transition-colors
                         ${isDarkMode 
@@ -57,8 +61,11 @@ const Eight = ({ isDarkMode, isBuild, totalCart, summary, selectedOutlet }: Prop
                     selectedOutlet={selectedOutlet} 
                     isBuild={isBuild} 
                     className={`
-                        bg-[var(--summary-primary-color)] text-white px-8 py-3.5 rounded-[18px] text-sm font-bold uppercase tracking-wider
-                        transition-all duration-300 hover:scale-[1.03] active:scale-95 shadow-lg shadow-[var(--summary-primary-color)]/30
+                        px-8 py-3.5 rounded-[18px] text-sm font-bold uppercase tracking-wider
+                        transition-all duration-300 hover:scale-[1.03] active:scale-95 shadow-lg
+                        bg-[var(--summary-primary-color)] 
+                        text-[var(--summary-secondary-color)] /* Perlindungan YIQ agar teks aman! */
+                        shadow-[var(--summary-primary-color)]/30
                     `}
                 >
                     Bayar

@@ -13,6 +13,10 @@ type Props = {
 }
 
 const ThirTeen = ({ isDarkMode, isBuild, totalCart, summary, selectedOutlet }: Props) => {
+    // SOP 4: Antisipasi Error (Edge Case)
+    // Sembunyikan secara otomatis jika belum ada produk di keranjang
+    if (totalCart < 1) return null;
+
     return (
         // Wrapper luar untuk z-index dan sentralisasi
         <div className="sticky bottom-10 z-50 flex justify-center px-4 w-full pointer-events-none">
@@ -32,21 +36,23 @@ const ThirTeen = ({ isDarkMode, isBuild, totalCart, summary, selectedOutlet }: P
                         : "bg-white/95 border-slate-200/60 shadow-slate-300/60"}
                 `}
             >
-                {/* Bagian Kiri: Ikon & Badge */}
+                {/* Bagian Kiri: Ikon & Badge (Circle Hub Utama) */}
                 <div className={`
-                    relative flex items-center justify-center w-12 h-12 rounded-full transition-colors
-                    ${isDarkMode ? "bg-white/10 text-white" : "bg-slate-900 text-white"}
+                    relative flex items-center justify-center w-12 h-12 rounded-full transition-colors shadow-md
+                    bg-[var(--summary-primary-color)] 
+                    text-[var(--summary-secondary-color)] /* Warna ikon otomatis mengikuti rumus YIQ */
                 `}>
                     <CreditCard
                         size={20}
                         className="transition-transform duration-300 group-hover:rotate-[-5deg]"
                     />
 
-                    {/* Dynamic Cutout Badge untuk Total Item */}
+                    {/* Dynamic Cutout Badge untuk Total Item (Inverted YIQ agar kontras dengan Hub Utama) */}
                     <span className={`
                         absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1 rounded-full border-[2.5px] 
                         flex items-center justify-center text-[10px] font-black shadow-sm
-                        bg-[var(--summary-primary-color)] text-[var(--summary-secondary-color)]
+                        bg-[var(--summary-secondary-color)] 
+                        text-[var(--summary-primary-color)]
                         ${isDarkMode ? "border-[#1e1e1e]" : "border-white"}
                     `}>
                         {totalCart}
@@ -55,12 +61,14 @@ const ThirTeen = ({ isDarkMode, isBuild, totalCart, summary, selectedOutlet }: P
 
                 {/* Bagian Kanan: Tipografi Harga & Label */}
                 <div className="flex flex-col text-left justify-center">
-                    <span className={`font-black text-lg tracking-tight leading-none mb-1 ${isDarkMode ? "text-white" : "text-slate-900"
-                        }`}>
+                    <span className={`font-black text-lg tracking-tight leading-none mb-1 ${
+                        isDarkMode ? "text-white" : "text-slate-900"
+                    }`}>
                         {formatIDR(summary)}
                     </span>
-                    <span className={`text-[10px] font-bold uppercase tracking-widest ${isDarkMode ? "text-slate-400" : "text-slate-500"
-                        }`}>
+                    <span className={`text-[10px] font-bold uppercase tracking-widest ${
+                        isDarkMode ? "text-slate-400" : "text-slate-500"
+                    }`}>
                         Checkout Sekarang
                     </span>
                 </div>

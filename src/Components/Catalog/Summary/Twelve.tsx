@@ -12,6 +12,10 @@ type Props = {
 }
 
 const Twelve = ({ isDarkMode, isBuild, totalCart, summary, selectedOutlet }: Props) => {
+    // SOP 4: Antisipasi Error (Edge Case)
+    // Sembunyikan panel bergaya retro ini secara penuh jika keranjang belum terisi
+    if (totalCart < 1) return null;
+
     return (
         // Wrapper luar untuk posisi dan z-index
         <div className="sticky bottom-6 z-50 px-4 w-full max-w-xl mx-auto pointer-events-none">
