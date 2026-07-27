@@ -36,6 +36,11 @@ export const StatusOrder: Record<string, { bg: string; icon: React.ReactNode; la
         icon: <XCircle size={16} />,
         label: 'Dibatalkan'
     },
+    rejected: {
+        bg: 'bg-rose-50 text-rose-700 border-rose-200/60',
+        icon: <XCircle size={16} />,
+        label: 'Ditolak'
+    },
     expired: {
         bg: 'bg-gray-50 text-gray-700 border-gray-200/60',
         icon: <Hourglass size={16} />, // Pengganti TimerOff yang lebih umum di Lucide
