@@ -19,6 +19,7 @@ export interface PromoType {
     type: 'nominal' | 'percentage';
     value: number;
     min_purchase?: number;
+    max_discount?: number;
 }
 
 type Props = {
@@ -143,7 +144,9 @@ const ModalAddOrder = ({ onClose, addToast, outlets, handleSubmit }: Props) => {
             if (selectedPromo) {
                 if (!selectedPromo.min_purchase || sub >= selectedPromo.min_purchase) {
                     if (selectedPromo.type === 'percentage') {
-                        disc = sub * (selectedPromo.value / 100);
+                        const totalDisc = sub * (selectedPromo.value / 100);
+
+                        disc = totalDisc > (selectedPromo?.max_discount ?? 0) ? selectedPromo?.max_discount ?? 0 : sub * (selectedPromo.value / 100);
                     } else if (selectedPromo.type === 'nominal') {
                         disc = selectedPromo.value;
                     }
