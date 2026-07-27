@@ -40,6 +40,7 @@ export interface PromoType {
     end_date: string;
     id: number;
     value: number;
+    max_discount: number;
     name_promo: string;
     start_date: string;
     status: boolean;

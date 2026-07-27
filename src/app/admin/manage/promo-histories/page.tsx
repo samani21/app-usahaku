@@ -100,9 +100,13 @@ export default function PromoManagement() {
             if (res?.success) {
                 setPromos(res?.data || []);
                 if (res?.meta) setMeta(res.meta);
+            } else {
+                setShowAlert({ type: 'error', message: 'Gagal mengambil data promo', isOpen: true });
             }
         } catch (e: any) {
             console.error("Gagal mengambil data promo:", e);
+            // SOP: Tampilkan pesan error ke user jika koneksi gagal
+            setShowAlert({ type: 'error', message: 'Koneksi ke server bermasalah.', isOpen: true });
         } finally {
             setLoading(false);
         }
@@ -116,9 +120,15 @@ export default function PromoManagement() {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
     };
 
-    const formatPromoBadge = (type: string, value: number) => {
+    // SOP: Penyesuaian informasi badge jika ada maksimal potongan
+    const formatPromoBadge = (type: string, value: number, maxDiscount?: number) => {
         if (type === 'mixed_specific') return 'Spesifik (Bervariasi)';
-        if (type === 'percentage') return `Global: ${value}%`;
+        if (type === 'percentage') {
+            if (maxDiscount && maxDiscount > 0) {
+                return `Global: ${value}% (Maks ${formatRupiah(maxDiscount)})`;
+            }
+            return `Global: ${value}%`;
+        }
         return `Global: ${formatRupiah(value)}`;
     };
 
@@ -155,7 +165,8 @@ export default function PromoManagement() {
     const onDelete = async (id: number | null) => {
         setLoading(true);
         try {
-            const res = await Delete(`client//promo/${id}`);
+            // SOP: Fix typo URL double slash `//` menjadi `/`
+            const res = await Delete(`client/promo/${id}`);
             if (res) {
                 getPromo();
                 handleCloseModal();
@@ -223,13 +234,14 @@ export default function PromoManagement() {
                 ) : promos.length > 0 ? (
                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                            {promos.map((promo) => (
+                            {promos.map((promo: any) => (
                                 <div key={promo.id} className={`bg-white rounded-[2rem] border transition-all duration-300 flex flex-col justify-between overflow-hidden group ${promo.status ? 'border-slate-100 hover:border-emerald-200 shadow-sm hover:shadow-md' : 'border-slate-200/60 opacity-80'}`}>
                                     <div className="p-5 sm:p-6">
                                         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                                             <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest ${promo.type === 'percentage' ? 'bg-purple-50 text-purple-600 border border-purple-100' : promo.type === 'nominal' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
                                                 {promo.type === 'percentage' ? <Percent size={12} strokeWidth={3} /> : <Tag size={12} />}
-                                                {formatPromoBadge(promo.type, promo.value)}
+                                                {/* Memanggil helper baru untuk menampilkan maks diskon */}
+                                                {formatPromoBadge(promo.type, promo.value, promo.max_discount)}
                                             </span>
                                             <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${promo.status ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
                                                 {promo.status ? '● Aktif' : '○ Non-Aktif'}
@@ -256,12 +268,12 @@ export default function PromoManagement() {
                                         <div className="mt-4 pt-4 border-t border-slate-100">
                                             <div className="flex items-center gap-1.5 mb-3 px-1">
                                                 <ShoppingBag size={14} className={promo.status ? "text-emerald-500" : "text-slate-400"} />
-                                                <span className="text-[10px] font-extrabold tracking-widest text-slate-400 uppercase">Daftar Produk ({promo.products.length})</span>
+                                                <span className="text-[10px] font-extrabold tracking-widest text-slate-400 uppercase">Daftar Produk ({promo.products?.length || 0})</span>
                                             </div>
 
-                                            {promo.products.length > 0 ? (
+                                            {promo.products && promo.products.length > 0 ? (
                                                 <div className="flex flex-col gap-3 max-h-64 overflow-y-auto pr-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full">
-                                                    {promo.products.map((prod) => (
+                                                    {promo.products.map((prod: any) => (
                                                         <div key={prod.id} className={`flex flex-col p-3 border rounded-2xl gap-3 transition-colors ${promo.status ? 'bg-slate-50/70 border-slate-100 hover:bg-slate-50' : 'bg-slate-50/30 border-slate-100/50'}`}>
                                                             <div className="flex items-center justify-between gap-2">
                                                                 <div className="flex items-center gap-3 min-w-0">
@@ -272,31 +284,31 @@ export default function PromoManagement() {
                                                                     }
                                                                     <div className="min-w-0">
                                                                         <h4 className={`text-xs font-bold truncate ${promo.status ? 'text-slate-800' : 'text-slate-500'}`}>{prod.name}</h4>
-                                                                        {prod.variants?.length < 1 && (
-                                                                            <span className={`inline-block mt-0.5 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider ${promo.status ? 'text-rose-500 bg-rose-50' : 'text-slate-400 bg-slate-100'}`}>-{formatRupiah(prod.cut_value)}</span>
+                                                                        {(!prod.variants || prod.variants.length < 1) && (
+                                                                            <span className={`inline-block mt-0.5 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider ${promo.status ? 'text-rose-500 bg-rose-50' : 'text-slate-400 bg-slate-100'}`}>-{formatRupiah(prod.cut_value || 0)}</span>
                                                                         )}
                                                                     </div>
                                                                 </div>
-                                                                {prod.variants?.length < 1 && (
+                                                                {(!prod.variants || prod.variants.length < 1) && (
                                                                     <div className="flex items-center gap-2 shrink-0">
-                                                                        <span className="text-[11px] text-slate-400 line-through font-medium hidden sm:block">{formatRupiah(prod.price!)}</span>
+                                                                        <span className="text-[11px] text-slate-400 line-through font-medium hidden sm:block">{formatRupiah(prod.price || 0)}</span>
                                                                         <ArrowRight size={12} className="text-slate-300 hidden sm:block" />
-                                                                        <span className={`text-xs font-black ${promo.status ? 'text-emerald-600' : 'text-slate-500'}`}>{formatRupiah(prod.final_price)}</span>
+                                                                        <span className={`text-xs font-black ${promo.status ? 'text-emerald-600' : 'text-slate-500'}`}>{formatRupiah(prod.final_price || 0)}</span>
                                                                     </div>
                                                                 )}
                                                             </div>
                                                             {prod.variants && prod.variants.length > 0 && (
                                                                 <div className="pl-11 pr-1 space-y-2 mt-1">
-                                                                    {prod.variants.map(v => (
+                                                                    {prod.variants.map((v: any) => (
                                                                         <div key={v.id} className="flex flex-col sm:flex-row justify-between sm:items-center bg-white/80 p-2.5 rounded-xl border border-slate-100 gap-1.5">
                                                                             <div className="flex items-center gap-1.5">
                                                                                 <ArrowRight size={12} className="text-slate-300" />
                                                                                 <span className={`text-[11px] font-bold ${promo.status ? 'text-slate-700' : 'text-slate-400'}`}>{v.name}</span>
-                                                                                <span className={`ml-1 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider ${promo.status ? 'text-rose-500 bg-rose-50' : 'text-slate-400 bg-slate-100'}`}>-{formatRupiah(v.cut_value)}</span>
+                                                                                <span className={`ml-1 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider ${promo.status ? 'text-rose-500 bg-rose-50' : 'text-slate-400 bg-slate-100'}`}>-{formatRupiah(v.cut_value || 0)}</span>
                                                                             </div>
                                                                             <div className="flex items-center gap-1.5 ml-4 sm:ml-0">
-                                                                                <span className="text-[10px] text-slate-400 line-through font-medium hidden sm:block">{formatRupiah(v.price)}</span>
-                                                                                <span className={`text-xs font-black ${promo.status ? 'text-emerald-600' : 'text-slate-500'}`}>{formatRupiah(v.final_price)}</span>
+                                                                                <span className="text-[10px] text-slate-400 line-through font-medium hidden sm:block">{formatRupiah(v.price || 0)}</span>
+                                                                                <span className={`text-xs font-black ${promo.status ? 'text-emerald-600' : 'text-slate-500'}`}>{formatRupiah(v.final_price || 0)}</span>
                                                                             </div>
                                                                         </div>
                                                                     ))}
@@ -308,7 +320,7 @@ export default function PromoManagement() {
                                             ) : (
                                                 <div className={`flex items-start gap-3 p-4 rounded-2xl text-xs font-bold border ${promo.status ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
                                                     <Info size={16} className="shrink-0 mt-0.5" />
-                                                    <span className="leading-relaxed">Promo Checkout: Otomatis memotong Grand Total belanja di kasir sebesar ({promo?.type === 'percentage' ? promo?.value + '%' : formatRupiah(promo?.value)}).</span>
+                                                    <span className="leading-relaxed">Promo Checkout: Otomatis memotong Grand Total belanja di kasir sebesar ({promo?.type === 'percentage' ? promo?.value + '%' : formatRupiah(promo?.value || 0)}).</span>
                                                 </div>
                                             )}
                                         </div>
@@ -362,7 +374,6 @@ export default function PromoManagement() {
                 )}
             </div>
 
-            {/* Modal Handlers sama dengan kode aslinya... */}
             {deleteData ? (
                 <ModalDelete isOpen={isModalOpen} onClose={handleCloseModal} deleteData={deleteData} handleDelete={onDelete} />
             ) : statusUpdateData ? (

@@ -33,6 +33,8 @@ type PromoConfig = {
     value: string;
 };
 
+// Tambahkan definisi max_discount jika di file './type' belum ada
+// Anggap editPromo sudah membawa properti max_discount dari API backend
 type Props = {
     onClose: () => void;
     editPromo: PromoType | null;
@@ -51,6 +53,7 @@ export default function CreateOrUpdatePromo({ onClose, editPromo }: Props) {
     const [isGlobal, setIsGlobal] = useState<boolean>(true);
     const [globalPromoType, setGlobalPromoType] = useState<'percentage' | 'nominal'>('percentage');
     const [globalPromoValue, setGlobalPromoValue] = useState<string>('');
+    const [globalMaxDiscount, setGlobalMaxDiscount] = useState<string>(''); // NEW: State untuk maksimal potongan
 
     // --- STATE PROMO SPESIFIK & PENGATURAN CEPAT (BULK) ---
     const [bulkPromoType, setBulkPromoType] = useState<'percentage' | 'nominal'>('percentage');
@@ -73,6 +76,10 @@ export default function CreateOrUpdatePromo({ onClose, editPromo }: Props) {
                 setIsGlobal(true);
                 setGlobalPromoType(editPromo.type as 'percentage' | 'nominal');
                 setGlobalPromoValue(String(editPromo.value));
+                // NEW: Populate data maksimal potongan jika sedang mode edit dan punya nilai
+                if (editPromo?.max_discount) {
+                    setGlobalMaxDiscount(String(editPromo.max_discount));
+                }
             } else {
                 setIsGlobal(false);
             }
@@ -245,10 +252,12 @@ export default function CreateOrUpdatePromo({ onClose, editPromo }: Props) {
                 }
             }
 
+            // NEW: Menambahkan max_discount ke payload jika Tipe = Persentase
             const payload = {
                 name_promo: namePromo,
                 value: isGlobal ? Number(globalPromoValue) : 0,
                 type: isGlobal ? globalPromoType : 'mixed_specific',
+                max_discount: (isGlobal && globalPromoType === 'percentage' && globalMaxDiscount) ? Number(globalMaxDiscount.replace(/[^0-9]/g, "")) : null,
                 status: 1,
                 start_date: startDate || null,
                 end_date: endDate || null,
@@ -318,13 +327,19 @@ export default function CreateOrUpdatePromo({ onClose, editPromo }: Props) {
 
                                 {/* Form Value Global */}
                                 {isGlobal && (
-                                    <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
                                         <div className="space-y-2">
                                             <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Tipe Promo</label>
                                             <div className="relative">
                                                 <select
                                                     value={globalPromoType}
-                                                    onChange={(e) => setGlobalPromoType(e.target.value as 'percentage' | 'nominal')}
+                                                    onChange={(e) => {
+                                                        setGlobalPromoType(e.target.value as 'percentage' | 'nominal');
+                                                        // NEW: Reset nilai maks diskon jika tipe diubah ke nominal
+                                                        if (e.target.value === 'nominal') {
+                                                            setGlobalMaxDiscount('');
+                                                        }
+                                                    }}
                                                     className="w-full pl-4 pr-10 py-3.5 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-sm font-bold text-slate-800 outline-none transition-all shadow-sm appearance-none cursor-pointer"
                                                 >
                                                     <option value="percentage">Persentase (%)</option>
@@ -351,6 +366,25 @@ export default function CreateOrUpdatePromo({ onClose, editPromo }: Props) {
                                                 />
                                             </div>
                                         </div>
+
+                                        {/* NEW: Input Maksimal Potongan - Hanya muncul jika tipe Persentase */}
+                                        {globalPromoType === 'percentage' && (
+                                            <div className="space-y-2 sm:col-span-2 animate-in fade-in slide-in-from-top-1">
+                                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Maksimal Potongan (Opsional)</label>
+                                                <div className="relative">
+                                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                                                        <span className="text-sm font-bold">Rp</span>
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Contoh: 50.000 (Kosongkan jika tanpa batas)"
+                                                        value={formatCurrencyInput(globalMaxDiscount)}
+                                                        onChange={(e) => setGlobalMaxDiscount(e.target.value.replace(/[^0-9]/g, ""))}
+                                                        className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-sm font-bold text-slate-800 outline-none transition-all shadow-sm"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
