@@ -9,7 +9,7 @@ import {
     Play, PlusIcon, ScanBarcode, SearchIcon, ShoppingBagIcon,
     SlidersIcon, Wallet, XCircle, AlertTriangle, Shell, RefreshCw
 } from 'lucide-react'
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { OutletsType } from '@/types/Admin/OutletType'
 import Loading from '@/Components/Loading'
 import ModalPayment from './Components/ModalPayment'
@@ -56,6 +56,7 @@ const OrdersComponent = (props: Props) => {
     const [toasts, setToasts] = useState<{ message: string, type: string } | null>(null);
     const [outlets, setOutlets] = useState<OutletsType[]>([]);
 
+    const abortControllerRef = useRef<AbortController | null>(null);
     // Debounce Search Query
     useEffect(() => {
         const timer = setTimeout(() => setDebouncedSearch(searchQuery), 500);
@@ -64,7 +65,17 @@ const OrdersComponent = (props: Props) => {
 
     // 3. SOP ANTISIPASI ERROR: Fallback jika API Gagal + background refresh
     const getOrder = useCallback(async (isBackground = false) => {
-        if (!isBackground) setLoading(true); // Hindari full loading jika cuma refresh data dari action
+        // Batalkan request sebelumnya jika masih berjalan (Anti Race-Condition)
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+
+        // Buat controller baru untuk request saat ini
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        if (!isBackground) setLoading(true);
+
         try {
             const params = new URLSearchParams({
                 per_page: itemsPerPage.toString(),
@@ -75,7 +86,11 @@ const OrdersComponent = (props: Props) => {
             if (selectedStatus !== 'all') params.append('status', selectedStatus);
             if (selectedOutlet !== 'all') params.append('outlet_id', selectedOutlet);
 
-            const res = await Get<{ success: boolean, data: dataType }>(`client/orders?${params.toString()}`);
+            // Gunakan signal dari controller pada utility Get Anda (pastikan Axios/Fetch mendukung ini)
+            const res = await Get<{ success: boolean, data: dataType }>(
+                `client/orders?${params.toString()}`,
+                { signal: controller.signal }
+            );
 
             if (res?.success) {
                 setDataOrders(res?.data);
@@ -83,10 +98,16 @@ const OrdersComponent = (props: Props) => {
                     setOutlets(res.data.outlets);
                 }
             } else {
-                addToast('Gagal memuat pesanan. Coba muat ulang.', 'error');
+                addToast('Gagal memuat pesanan. Silakan muat ulang.', 'error');
             }
         } catch (e: any) {
-            addToast(e?.message || 'Koneksi ke server terputus. Periksa internet Anda.', 'error');
+            // Abaikan error jika itu adalah hasil dari pembatalan request
+            if (e.isCanceled || e.name === 'AbortError' || e.message === 'canceled') {
+                return; // Hentikan eksekusi, biarkan sunyi, jangan munculkan toast
+            }
+            // SOP 4: Fallback perlindungan error
+            const errorMessage = e?.message || e?.response?.data?.message || 'Koneksi terputus atau server tidak merespons.';
+            addToast(errorMessage, 'error'); // atau toast.error(errorMessage)
             setDataOrders(undefined);
         } finally {
             if (!isBackground) setLoading(false);
@@ -151,7 +172,26 @@ const OrdersComponent = (props: Props) => {
         setToasts({ message, type });
         setTimeout(() => setToasts(null), 3000);
     };
+    // Taruh di atas komponen atau di luar return()
+    const getPaginationGroup = (currentPage: number, lastPage: number) => {
+        // Jika total halaman 7 atau kurang, tampilkan semua angkanya (1 2 3 4 5 6 7)
+        if (lastPage <= 7) {
+            return Array.from({ length: lastPage }, (_, i) => i + 1);
+        }
 
+        // Jika posisi halaman ada di awal (misal: hal 1, 2, 3) -> 1 2 3 4 ... 100
+        if (currentPage <= 3) {
+            return [1, 2, 3, 4, '...', lastPage - 1, lastPage];
+        }
+
+        // Jika posisi halaman ada di akhir (misal: hal 98, 99, 100) -> 1 2 ... 97 98 99 100
+        if (currentPage >= lastPage - 2) {
+            return [1, 2, '...', lastPage - 3, lastPage - 2, lastPage - 1, lastPage];
+        }
+
+        // Jika posisi halaman ada di tengah (misal: hal 50) -> 1 ... 49 50 51 ... 100
+        return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', lastPage];
+    };
     return (
         <MainLayout page='Kelola Orderan'>
             <div className="p-4 lg:p-6 mx-auto space-y-6 ">
@@ -506,18 +546,28 @@ const OrdersComponent = (props: Props) => {
                             >
                                 Sebelumnya
                             </button>
-                            {Array.from({ length: Number(dataOrders?.meta?.last_page ?? 0) }, (_, i) => i + 1).map((pageNumber) => (
-                                <button
-                                    key={pageNumber}
-                                    onClick={() => setCurrentPage(pageNumber)}
-                                    className={`w-9 h-9 text-xs font-bold rounded-xl transition-all ${currentPage === pageNumber
-                                        ? 'bg-[#009662] text-white border border-[#009662] shadow-sm'
-                                        : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 shadow-sm'
-                                        }`}
-                                >
-                                    {pageNumber}
-                                </button>
+
+                            {/* --- BAGIAN YANG DIUBAH --- */}
+                            {getPaginationGroup(currentPage, Number(dataOrders?.meta?.last_page ?? 0)).map((item, index) => (
+                                item === '...' ? (
+                                    <span key={`dots-${index}`} className="w-9 h-9 flex items-center justify-center text-xs font-bold text-slate-400">
+                                        ...
+                                    </span>
+                                ) : (
+                                    <button
+                                        key={`page-${item}`}
+                                        onClick={() => setCurrentPage(Number(item))}
+                                        className={`w-9 h-9 flex items-center justify-center text-xs font-bold rounded-xl transition-all ${currentPage === item
+                                            ? 'bg-[#009662] text-white border border-[#009662] shadow-sm'
+                                            : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 shadow-sm'
+                                            }`}
+                                    >
+                                        {item}
+                                    </button>
+                                )
                             ))}
+                            {/* --------------------------- */}
+
                             <button
                                 onClick={() => setCurrentPage((prev) => Math.min(prev + 1, Number(dataOrders?.meta?.last_page ?? 0)))}
                                 disabled={currentPage === Number(dataOrders?.meta?.last_page ?? 0)}
