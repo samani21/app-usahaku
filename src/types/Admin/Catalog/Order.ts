@@ -6,6 +6,7 @@ export interface OrderType {
     business_id: number;
     created_at: string;
     customer_name: string;
+    approve_at: string;
     device_id: number;
     discount_amount: number;
     grand_total: number;
@@ -24,4 +25,12 @@ export interface OrderType {
     unique_code: string;
     slug?: string;
     items: OrderItemType[];
+    user: UserType
+}
+
+export interface UserType {
+    id: number;
+    email: string;
+    whatsapp: string;
+    name: string;
 }

@@ -7,9 +7,10 @@ import {
     AlertCircle, CalendarIcon, Check, CheckCheck, CheckCircle2,
     Clock, Eye, FileCheck2, Hourglass, Package, PackageCheck,
     Play, PlusIcon, ScanBarcode, SearchIcon, ShoppingBagIcon,
-    SlidersIcon, Wallet, XCircle, AlertTriangle, Shell, RefreshCw
+    SlidersIcon, Wallet, XCircle, AlertTriangle, Shell, RefreshCw,
+    Calendar
 } from 'lucide-react'
-import React, { useEffect, useState, useCallback, useRef } from 'react'
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { OutletsType } from '@/types/Admin/OutletType'
 import Loading from '@/Components/Loading'
 import ModalPayment from './Components/ModalPayment'
@@ -17,6 +18,7 @@ import ModalScan from './Components/ModalScan'
 import ModalAddOrder from './Components/ModalAddOrder'
 import ModalDetailOrder from './Components/ModalDetailOrder'
 import MainLayout from '@/Components/Layout/MainLayout'
+import DateRangeModal from '@/Components/CRUD/DateRangeModal'
 
 type Props = {}
 
@@ -38,7 +40,7 @@ interface dataType {
 
 const OrdersComponent = (props: Props) => {
     const [loading, setLoading] = useState<boolean>(true);
-    const [actionLoading, setActionLoading] = useState<boolean>(false); // Proteksi double click / action loading
+    const [actionLoading, setActionLoading] = useState<boolean>(false);
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [debouncedSearch, setDebouncedSearch] = useState<string>('');
     const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -46,6 +48,8 @@ const OrdersComponent = (props: Props) => {
     const [dataOrders, setDataOrders] = useState<dataType>();
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [dateRangeText, setDateRangeText] = useState("");
 
     // Modal States
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -57,20 +61,36 @@ const OrdersComponent = (props: Props) => {
     const [outlets, setOutlets] = useState<OutletsType[]>([]);
 
     const abortControllerRef = useRef<AbortController | null>(null);
+
     // Debounce Search Query
     useEffect(() => {
         const timer = setTimeout(() => setDebouncedSearch(searchQuery), 500);
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
-    // 3. SOP ANTISIPASI ERROR: Fallback jika API Gagal + background refresh
+    const parsedDate = useMemo(() => {
+        if (!dateRangeText.includes(" - ")) return { start_date: "", end_date: "" };
+
+        const monthMap: Record<string, string> = {
+            Jan: "01", Feb: "02", Mar: "03", Apr: "04", Mei: "05", Jun: "06",
+            Jul: "07", Agt: "08", Agu: "08", Sep: "09", Okt: "10", Nov: "11", Des: "12",
+        };
+
+        const formatDate = (dateStr: string) => {
+            const [day, month, year] = dateStr.trim().split(" ");
+            const formattedMonth = monthMap[month] || "01";
+            return `${year}-${formattedMonth}-${day.padStart(2, "0")}`;
+        };
+
+        const [start, end] = dateRangeText.split(" - ");
+        return { start_date: formatDate(start), end_date: formatDate(end) };
+    }, [dateRangeText]);
+
     const getOrder = useCallback(async (isBackground = false) => {
-        // Batalkan request sebelumnya jika masih berjalan (Anti Race-Condition)
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
         }
 
-        // Buat controller baru untuk request saat ini
         const controller = new AbortController();
         abortControllerRef.current = controller;
 
@@ -81,12 +101,12 @@ const OrdersComponent = (props: Props) => {
                 per_page: itemsPerPage.toString(),
                 page: currentPage.toString(),
             });
-
+            if (parsedDate.start_date) params.append("start_date", parsedDate.start_date);
+            if (parsedDate.end_date) params.append("end_date", parsedDate.end_date);
             if (debouncedSearch) params.append('search', debouncedSearch);
             if (selectedStatus !== 'all') params.append('status', selectedStatus);
             if (selectedOutlet !== 'all') params.append('outlet_id', selectedOutlet);
 
-            // Gunakan signal dari controller pada utility Get Anda (pastikan Axios/Fetch mendukung ini)
             const res = await Get<{ success: boolean, data: dataType }>(
                 `client/orders?${params.toString()}`,
                 { signal: controller.signal }
@@ -101,20 +121,17 @@ const OrdersComponent = (props: Props) => {
                 addToast('Gagal memuat pesanan. Silakan muat ulang.', 'error');
             }
         } catch (e: any) {
-            // Abaikan error jika itu adalah hasil dari pembatalan request
             if (e.isCanceled || e.name === 'AbortError' || e.message === 'canceled') {
-                return; // Hentikan eksekusi, biarkan sunyi, jangan munculkan toast
+                return;
             }
-            // SOP 4: Fallback perlindungan error
             const errorMessage = e?.message || e?.response?.data?.message || 'Koneksi terputus atau server tidak merespons.';
-            addToast(errorMessage, 'error'); // atau toast.error(errorMessage)
+            addToast(errorMessage, 'error');
             setDataOrders(undefined);
         } finally {
             if (!isBackground) setLoading(false);
         }
-    }, [currentPage, itemsPerPage, debouncedSearch, selectedStatus, selectedOutlet]);
+    }, [currentPage, itemsPerPage, debouncedSearch, selectedStatus, selectedOutlet, parsedDate]);
 
-    // Fetch Orders
     useEffect(() => {
         getOrder();
     }, [getOrder]);
@@ -123,6 +140,7 @@ const OrdersComponent = (props: Props) => {
         setSearchQuery('');
         setSelectedStatus('all');
         setSelectedOutlet('all');
+        setDateRangeText(''); // Reset juga tanggalnya
         setCurrentPage(1);
     }
 
@@ -145,7 +163,7 @@ const OrdersComponent = (props: Props) => {
     };
 
     const handleUpdateStatus = async (order: OrderType, status: string, payment_status?: string, cash?: number) => {
-        if (actionLoading) return; // Mencegah double klik
+        if (actionLoading) return;
         setActionLoading(true);
         try {
             const formData = new FormData();
@@ -156,7 +174,7 @@ const OrdersComponent = (props: Props) => {
             const res = await Post<any, FormData>(`client/orders/${order?.id}`, formData);
             if (res?.success) {
                 addToast('Status pesanan berhasil diperbarui', 'success');
-                await getOrder(true); // Tarik data lagi secara background, tanpa layar blank putih
+                await getOrder(true);
                 setShowPaymentModal(false);
                 setActiveVerifyOrder(null);
                 setIsOpenScan(false);
@@ -172,29 +190,23 @@ const OrdersComponent = (props: Props) => {
         setToasts({ message, type });
         setTimeout(() => setToasts(null), 3000);
     };
-    // Taruh di atas komponen atau di luar return()
+
     const getPaginationGroup = (currentPage: number, lastPage: number) => {
-        // Jika total halaman 7 atau kurang, tampilkan semua angkanya (1 2 3 4 5 6 7)
         if (lastPage <= 7) {
             return Array.from({ length: lastPage }, (_, i) => i + 1);
         }
-
-        // Jika posisi halaman ada di awal (misal: hal 1, 2, 3) -> 1 2 3 4 ... 100
         if (currentPage <= 3) {
             return [1, 2, 3, 4, '...', lastPage - 1, lastPage];
         }
-
-        // Jika posisi halaman ada di akhir (misal: hal 98, 99, 100) -> 1 2 ... 97 98 99 100
         if (currentPage >= lastPage - 2) {
             return [1, 2, '...', lastPage - 3, lastPage - 2, lastPage - 1, lastPage];
         }
-
-        // Jika posisi halaman ada di tengah (misal: hal 50) -> 1 ... 49 50 51 ... 100
         return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', lastPage];
     };
+
     return (
         <MainLayout page='Kelola Orderan'>
-            <div className="p-4 lg:p-6 mx-auto space-y-6 ">
+            <div className="p-4 lg:p-6 mx-auto space-y-6">
 
                 {/* --- METRICS CARDS --- */}
                 <div className="flex overflow-x-auto lg:grid lg:grid-cols-4 gap-4 pb-2 lg:pb-0 snap-x">
@@ -239,26 +251,47 @@ const OrdersComponent = (props: Props) => {
                     </div>
                 </div>
 
-                {/* --- TOOLBAR FILTERS & ACTIONS --- */}
-                <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                    {/* Search Input */}
-                    <div className="relative w-full xl:max-w-md">
-                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-                            <SearchIcon size={18} />
-                        </span>
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Cari pesanan, invoice..."
-                            className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#009662]/20 focus:border-[#009662] focus:bg-white transition-all text-slate-700 placeholder-slate-400"
-                        />
+                {/* --- TOOLBAR FILTERS & ACTIONS (RAPI & TERSTRUKTUR) --- */}
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                    {/* Baris Pertama: Search Bar & Tombol Aksi Utama (Scan & Order Baru) */}
+                    <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
+                        {/* Search Input */}
+                        <div className="relative w-full md:max-w-md">
+                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                                <SearchIcon size={18} />
+                            </span>
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Cari pesanan, invoice..."
+                                className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#009662]/20 focus:border-[#009662] focus:bg-white transition-all text-slate-700 placeholder-slate-400"
+                            />
+                        </div>
+
+                        {/* Action Buttons (Scan & Order Baru) */}
+                        <div className="flex items-center gap-2 w-full md:w-auto">
+                            <button
+                                onClick={() => setIsOpenScan(true)}
+                                className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors border border-indigo-100"
+                            >
+                                <ScanBarcode size={18} />
+                                <span>Scan</span>
+                            </button>
+                            <button
+                                onClick={() => setOpenModalAdd(true)}
+                                className="flex-1 md:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-bold text-white bg-[#009662] hover:bg-[#007d51] active:scale-95 rounded-xl transition-all shadow-sm shadow-[#009662]/20"
+                            >
+                                <PlusIcon size={18} />
+                                <span>Order Baru</span>
+                            </button>
+                        </div>
                     </div>
 
-                    {/* Dropdown Filters & Actions */}
-                    <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto justify-start xl:justify-end">
-                        {/* Filter Outlet Dinamis */}
-                        <div className="relative flex-1 sm:flex-none min-w-[140px]">
+                    {/* Baris Kedua: Filter Kategori (Outlet, Tanggal, Status) & Tombol Refresh/Reset */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-slate-100">
+                        {/* 1. Filter Outlet Dinamis */}
+                        <div className="relative w-full">
                             <select
                                 value={selectedOutlet}
                                 onChange={(e) => setSelectedOutlet(e.target.value)}
@@ -272,8 +305,22 @@ const OrdersComponent = (props: Props) => {
                             <span className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">▼</span>
                         </div>
 
-                        {/* Filter Status */}
-                        <div className="relative flex-1 sm:flex-none min-w-[140px]">
+                        {/* 2. Filter Rentang Tanggal */}
+                        <div className="relative w-full">
+                            <div className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none text-slate-400">
+                                <Calendar size={18} />
+                            </div>
+                            <input
+                                readOnly
+                                onClick={() => setIsModalOpen(true)}
+                                value={dateRangeText}
+                                placeholder="Pilih rentang tanggal"
+                                className="w-full cursor-pointer text-sm font-semibold text-slate-800 pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 hover:border-emerald-300 focus:border-emerald-500 focus:bg-white rounded-xl outline-none transition-all placeholder:font-medium placeholder:text-slate-400 truncate"
+                            />
+                        </div>
+
+                        {/* 3. Filter Status */}
+                        <div className="relative w-full">
                             <select
                                 value={selectedStatus}
                                 onChange={(e) => setSelectedStatus(e.target.value)}
@@ -281,6 +328,7 @@ const OrdersComponent = (props: Props) => {
                             >
                                 <option value="all">Semua Status</option>
                                 <option value="pending">Menunggu</option>
+                                <option value="paid">Dibayar</option>
                                 <option value="processing">Diproses</option>
                                 <option value="completed">Selesai</option>
                                 <option value="cancelled">Dibatalkan</option>
@@ -288,42 +336,23 @@ const OrdersComponent = (props: Props) => {
                             <span className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">▼</span>
                         </div>
 
-                        {/* Reset & Refresh Filter Area */}
-                        <div className="flex items-center gap-2">
-                            {/* Refresh Button */}
+                        {/* 4. Tombol Refresh & Reset Filter */}
+                        <div className="flex items-center gap-2 w-full">
                             <button
                                 onClick={() => getOrder(false)}
                                 disabled={loading && !actionLoading}
                                 title="Refresh Data"
-                                className="flex items-center justify-center p-2.5 text-slate-500 hover:text-[#009662] bg-slate-50 hover:bg-[#009662]/10 rounded-xl transition-colors border border-slate-200 hover:border-[#009662]/30 disabled:opacity-50"
+                                className="flex-1 flex items-center justify-center gap-2 py-2.5 text-slate-600 hover:text-[#009662] bg-slate-50 hover:bg-[#009662]/10 rounded-xl transition-colors border border-slate-200 hover:border-[#009662]/30 disabled:opacity-50 text-xs font-semibold"
                             >
-                                <RefreshCw size={18} className={loading && !actionLoading ? "animate-spin text-[#009662]" : ""} />
+                                <RefreshCw size={16} className={loading && !actionLoading ? "animate-spin text-[#009662]" : ""} />
+                                <span>Muat Ulang</span>
                             </button>
-
-                            {/* Reset Filter */}
                             <button
                                 onClick={handleResetFilter}
                                 title="Reset Filter"
-                                className="flex items-center justify-center p-2.5 text-slate-500 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors border border-slate-200"
+                                className="flex items-center justify-center px-4 py-2.5 text-slate-500 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors border border-slate-200"
                             >
-                                <SlidersIcon size={18} />
-                            </button>
-                        </div>
-
-                        <div className='flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0'>
-                            <button
-                                onClick={() => setIsOpenScan(true)}
-                                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors border border-indigo-100"
-                            >
-                                <ScanBarcode size={18} />
-                                <span>Scan</span>
-                            </button>
-                            <button
-                                onClick={() => setOpenModalAdd(true)}
-                                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-bold text-white bg-[#009662] hover:bg-[#007d51] active:scale-95 rounded-xl transition-all shadow-sm shadow-[#009662]/20"
-                            >
-                                <PlusIcon size={18} />
-                                <span>Order Baru</span>
+                                <SlidersIcon size={16} />
                             </button>
                         </div>
                     </div>
@@ -343,8 +372,8 @@ const OrdersComponent = (props: Props) => {
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                         {dataOrders.data.map((order) => {
                             const date = new Date(order.created_at);
-                            const formattedDate = date.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
-                            const formattedTime = date.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+                            const formattedDate = date.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric", });
+                            const formattedTime = date.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", timeZoneName: 'short' });
                             const orderStatus = statusMeta?.[order?.payment_status === 'unpaid' ? order?.payment_status : order?.status];
 
                             return (
@@ -360,7 +389,7 @@ const OrdersComponent = (props: Props) => {
                                                     {order.order_number}
                                                 </span>
                                                 <h3 className="text-base font-bold text-slate-800 leading-tight">
-                                                    {order.customer_name || 'Tanpa Nama'}
+                                                    {order.customer_name || order?.user?.name || 'Tanpa Nama'}
                                                 </h3>
                                             </div>
 
@@ -410,7 +439,7 @@ const OrdersComponent = (props: Props) => {
                                         </div>
                                     </div>
 
-                                    {/* Card Footer - Dynamic Actions (Dengan Proteksi disabled={actionLoading}) */}
+                                    {/* Card Footer */}
                                     <div className="p-5 bg-slate-50/50 border-t border-slate-200 flex flex-col gap-4">
                                         <div className="flex items-end justify-between text-xs">
                                             <div>
@@ -420,7 +449,6 @@ const OrdersComponent = (props: Props) => {
                                                 </span>
                                             </div>
                                             <div className="text-right flex flex-col items-end">
-                                                {/* Area Diskon */}
                                                 {Number(order.discount_amount) > 0 && (
                                                     <div className="mb-2.5 space-y-1.5 text-right flex flex-col items-end">
                                                         <div>
@@ -547,7 +575,6 @@ const OrdersComponent = (props: Props) => {
                                 Sebelumnya
                             </button>
 
-                            {/* --- BAGIAN YANG DIUBAH --- */}
                             {getPaginationGroup(currentPage, Number(dataOrders?.meta?.last_page ?? 0)).map((item, index) => (
                                 item === '...' ? (
                                     <span key={`dots-${index}`} className="w-9 h-9 flex items-center justify-center text-xs font-bold text-slate-400">
@@ -566,7 +593,6 @@ const OrdersComponent = (props: Props) => {
                                     </button>
                                 )
                             ))}
-                            {/* --------------------------- */}
 
                             <button
                                 onClick={() => setCurrentPage((prev) => Math.min(prev + 1, Number(dataOrders?.meta?.last_page ?? 0)))}
@@ -590,7 +616,6 @@ const OrdersComponent = (props: Props) => {
                 />
             )}
 
-            {/* Loading utamanya nampil waktu narik data pertama / pindah filter, bukan saat update status*/}
             {loading && !actionLoading && <Loading />}
 
             {isOpenScan && <ModalScan onClose={() => setIsOpenScan(false)} handleUpdateStatus={handleUpdateStatus} />}
@@ -608,6 +633,22 @@ const OrdersComponent = (props: Props) => {
                 </div>
             )}
             {qrToken && <ModalDetailOrder onClose={() => setQrToken(null)} token={qrToken} />}
+            <DateRangeModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onApply={(dates) => {
+                    if (dates.length === 2) {
+                        const start = dates[0].toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+                        const end = dates[1].toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+                        setDateRangeText(`${start} - ${end}`)
+                    } else if (dates.length === 1) {
+                        const single = dates[0].toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+                        setDateRangeText(single)
+                    } else {
+                        setDateRangeText('')
+                    }
+                }}
+            />
         </MainLayout>
     )
 }
