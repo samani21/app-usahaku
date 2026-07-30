@@ -6,6 +6,7 @@ import GlassCard from './GlassCard';
 import NavItem from './NavItem';
 import { menuSidebar } from '@/lib/MenuSidebar';
 import { useCorrectPath } from '@/utils/useCorrectPath';
+import { formatImage } from '@/utils/formatImage';
 
 type Props = {
     isSidebarOpen: boolean;
@@ -59,14 +60,14 @@ const SidebarComponent = ({ isSidebarOpen, setIsSidebarOpen, setLoading, user, b
                     <div className="w-10 h-10 flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center bg-emerald-50">
                         {/* Hapus class shadow atau kotak putih di img ini jika ada dari CSS global */}
                         <img
-                            src={`${baseUrl}/logo.png`}
+                            src={formatImage(business?.logo_url) || `${baseUrl}/logo.png`}
                             alt="Logo"
                             className="w-7 h-7 object-contain"
                         />
                     </div>
                     <div>
                         <h2 className="text-xl font-bold tracking-tight text-slate-800 leading-none">
-                            Dashboard
+                            Admin Panel
                         </h2>
                         {/* Opsional: Tambahkan nama bisnis/user di bawahnya agar personal */}
                         <p className="text-xs font-medium text-slate-400 mt-1 truncate w-32">

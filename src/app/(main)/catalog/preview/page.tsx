@@ -71,7 +71,7 @@ export default function PreviewView({ }: Props) {
         const fetchCatalog = async () => {
             try {
                 setLoading(true);
-                const res = await Get<{ success: boolean; data: Catalog }>('/catalog');
+                const res = await Get<{ success: boolean; data: Catalog }>('client/catalog');
 
                 if (res?.success && res.data) {
                     const data = res.data;
