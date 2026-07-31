@@ -33,6 +33,10 @@ export const menuSidebar: menuSide[] = [
                 href: '/store'
             },
             {
+                label: 'Karyawan',
+                href: '/employee'
+            },
+            {
                 label: 'Banks',
                 href: '/banks'
             },

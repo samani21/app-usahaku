@@ -11,7 +11,7 @@ import React, { ChangeEvent, useMemo, useState, useEffect, useRef } from "react"
 type Props = {
     label: string;
     type: "text" | "number" | "file" | "textarea" | "select" | "price" |
-    "autocomplete" | "checkbox" | "switch" | "date" | "color" |
+    "autocomplete" | "checkbox" | "switch" | "date" | "color" | "email" |
     "image" | "time" | "password" | "radio" | "wysiwyg";
     name: string;
     value?: any;
