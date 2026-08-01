@@ -83,7 +83,7 @@ const SidebarComponent = ({ isSidebarOpen, setIsSidebarOpen, setLoading, user, b
                     <div className='h-full overflow-y-auto no-scrollbar pb-6 space-y-1.5'>
                         {
                             (isEmployee ? EmployeeMenuSidebar : menuSidebar)?.map((ms, i) => {
-                                const isOpen = pathNameParent === getCorrectPath(`${ms?.href}`);
+                                const isOpen = (isEmployee ? pathname : pathNameParent) === getCorrectPath(`${ms?.href}`);
                                 const isLocked = ms?.label?.toLowerCase() === 'transaksi' && (
                                     business?.verified_status == 0 ||
                                     business?.subscription_status === 'expired' ||

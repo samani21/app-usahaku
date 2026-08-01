@@ -132,5 +132,9 @@ export const EmployeeMenuSidebar: menuSide[] = [
         label: "Dashboard",
         href: '/employee'
     },
-
+    {
+        Icon: ScrollText,
+        label: 'Orderan',
+        href: '/employee/orders'
+    },
 ];
