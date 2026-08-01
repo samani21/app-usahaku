@@ -15,7 +15,7 @@ type Props = {
     page?: string;
 }
 
-const MainLayout = ({ children, page }: Props) => {
+const EmployeeLayout = ({ children, page }: Props) => {
     const token = getToken();
     const router = useRouter();
     const pathname = usePathname();
@@ -61,7 +61,7 @@ const MainLayout = ({ children, page }: Props) => {
     // Handle Resize & Token Check
     useEffect(() => {
         if (!token) {
-            router?.push(getCorrectPath('/auth/login'));
+            router?.push(getCorrectPath('/auth/employee'));
             return;
         }
 
@@ -79,7 +79,7 @@ const MainLayout = ({ children, page }: Props) => {
         setLoading(true);
         try {
             // Sesuai request: menggunakan prefix client/
-            const res = await Get<{ data: { user: User, business: Business } }>('client/business/profile');
+            const res = await Get<{ data: { user: User, business: Business } }>('employee/profile');
             if (res?.data) {
                 setUser(res.data.user);
                 setBusiness(res.data.business);
@@ -95,7 +95,7 @@ const MainLayout = ({ children, page }: Props) => {
         setLoading(true);
         Cookies.remove('token');
         localStorage?.removeItem('user');
-        router?.push(getCorrectPath('/auth/login'));
+        router?.push(getCorrectPath('/auth/employee'));
     };
 
     if (loading) return <Loading />;
@@ -117,7 +117,7 @@ const MainLayout = ({ children, page }: Props) => {
                     setLoading={setLoading}
                     user={user}
                     business={business}
-                    isEmployee={false}
+                    isEmployee={true}
                 />
                 <main className="relative h-screen flex-1 flex flex-col lg:pr-4 overflow-hidden">
                     <Header
@@ -125,7 +125,7 @@ const MainLayout = ({ children, page }: Props) => {
                         handleLogout={handleLogout}
                         user={user}
                         business={business}
-                        isEmployee={false}
+                        isEmployee={true}
                     />
                     <div className='overflow-auto no-scrollbar mt-18 lg:mt-20 px-4 lg:px-0'>
                         <div className='mt-4'>
@@ -140,4 +140,4 @@ const MainLayout = ({ children, page }: Props) => {
     );
 }
 
-export default MainLayout;
+export default EmployeeLayout;

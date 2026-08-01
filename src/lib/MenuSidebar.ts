@@ -126,3 +126,11 @@ export const menuSidebar: menuSide[] = [
         href: '/catalog',
     },
 ];
+export const EmployeeMenuSidebar: menuSide[] = [
+    {
+        Icon: LayoutDashboard,
+        label: "Dashboard",
+        href: '/employee'
+    },
+
+];

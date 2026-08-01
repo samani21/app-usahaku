@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Edit, Trash2Icon, Copy, CheckCircle2 } from 'lucide-react'
+import { Edit, Trash2Icon, Copy, CheckCircle2, ExternalLink } from 'lucide-react'
 
 import { Meta } from '@/types/Public'
 import { Get } from '@/utils/Get'
@@ -18,6 +18,7 @@ import Loading from '@/Components/Loading'
 import Alert from '@/Components/Alert'
 import MainLayout from '@/Components/Layout/MainLayout'
 import CreateOrUpdateEmployee from './Components/CreateOrUpdateOutlet'
+import { useCorrectPath } from '@/utils/useCorrectPath'
 
 // --- DEFINISI TIPE PEGAWAI ---
 export interface EmployeeType {
@@ -34,6 +35,7 @@ export interface EmployeeType {
 }
 
 const EmployeesComponent = () => {
+    const { getCorrectPath } = useCorrectPath()
     // --- FILTER & PAGINATION STATE ---
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -182,7 +184,12 @@ const EmployeesComponent = () => {
 
     const copyToClipboard = () => {
         if (newPasswordData) {
-            navigator.clipboard.writeText(`Login Kasir\nEmail: ${newPasswordData.email}\nPassword: ${newPasswordData.password}`);
+            // Dapatkan full URL jika memungkinkan (supaya langsung jadi link di WA)
+            const origin = typeof window !== 'undefined' ? window.location.origin : '';
+            const loginPath = getCorrectPath('/auth/employee');
+            const fullLoginUrl = loginPath.startsWith('http') ? loginPath : `${origin}${loginPath}`;
+
+            navigator.clipboard.writeText(`Info Login Kasir\n\nLink Login: ${fullLoginUrl}\nEmail: ${newPasswordData.email}\nPassword: ${newPasswordData.password}`);
             setIsCopied(true);
             setTimeout(() => setIsCopied(false), 3000);
         }
@@ -270,11 +277,32 @@ const EmployeesComponent = () => {
                             <h3 className="text-xl font-bold text-slate-800">Akun Pegawai Berhasil Dibuat!</h3>
                             <p className="text-sm text-slate-500">Berikan kredensial ini kepada <b>{newPasswordData.name}</b> untuk login ke aplikasi Kasir.</p>
 
-                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-left space-y-2 mt-4 relative">
-                                <p className="text-sm text-slate-500">Email Login:</p>
-                                <p className="font-semibold text-slate-800">{newPasswordData.email}</p>
-                                <p className="text-sm text-slate-500 mt-2">Password Sementara:</p>
-                                <p className="font-mono font-bold text-lg text-blue-600">{newPasswordData.password}</p>
+                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-left space-y-3 mt-4 relative">
+
+                                {/* TAMPILAN LINK LOGIN */}
+                                <div>
+                                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Link Akses Kasir</p>
+                                    <a
+                                        href={getCorrectPath('/auth/employee')}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline bg-blue-50 py-1.5 px-3 rounded-lg transition-colors"
+                                    >
+                                        Buka Halaman Login <ExternalLink size={14} />
+                                    </a>
+                                </div>
+
+                                <div className="h-px w-full bg-slate-200 my-2"></div>
+
+                                <div>
+                                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Email Login:</p>
+                                    <p className="font-semibold text-slate-800">{newPasswordData.email}</p>
+                                </div>
+
+                                <div>
+                                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Password Sementara:</p>
+                                    <p className="font-mono font-bold text-xl text-blue-600">{newPasswordData.password}</p>
+                                </div>
                             </div>
 
                             <div className="flex gap-3 pt-4">

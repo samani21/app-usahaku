@@ -1,45 +1,27 @@
 "use client";
-import { Bell, ChevronDown, LogOut, Menu, Settings, User, X, Check, Crown, Sparkles, Zap, ShieldCheck, AlertCircle, Store } from 'lucide-react'
+import { Bell, ChevronDown, LogOut, Menu, Settings, User, Crown, Zap, AlertCircle, Store } from 'lucide-react'
 import React, { Dispatch, SetStateAction, useState, useEffect, useRef } from 'react'
 import GlassCard from './GlassCard';
 import { usePathname } from 'next/navigation';
 // import { menuSidebar } from '@/lib/MenuSidebar'; // Boleh dihapus jika tidak dipakai di Header
-import { Get } from '@/utils/Get';
 import ModalSubscription from './ModalSubscription';
 import { formatImage } from '@/utils/formatImage';
 import { User as UserType, Business as BusinessType } from '@/types'; // Gunakan tipe data jika sudah dibuat
 
 type Props = {
   setIsSidebarOpen: Dispatch<SetStateAction<boolean>>;
-  isSidebarOpen: boolean;
-  setIsMobileActionMenuOpen: Dispatch<SetStateAction<boolean>>;
-  isMobileActionMenuOpen: boolean;
-  closeMobileActionMenu: () => void;
-  handleNotificationClick: () => void;
-  handleProfileClick: () => void;
-  title: string;
   handleLogout: () => void;
   user: UserType | any; // Lebih baik gunakan tipe data spesifik
   business: BusinessType | any;
-  // REFACTOR: Gunakan tipe RefObject dari React, jangan 'any'
-  mobileMenuRef: React.RefObject<HTMLDivElement | null>;
-  mobileBtnRef: React.RefObject<HTMLButtonElement | null>;
+  isEmployee: boolean;
 }
 
 const Header = ({
   setIsSidebarOpen,
   user,
   business,
-  isSidebarOpen,
-  setIsMobileActionMenuOpen,
-  handleNotificationClick,
-  handleProfileClick,
-  isMobileActionMenuOpen,
-  closeMobileActionMenu,
-  title,
   handleLogout,
-  mobileMenuRef, // Diekstrak di sini
-  mobileBtnRef   // Diekstrak di sini
+  isEmployee = false
 }: Props) => {
   const [notifOpen, setNotifOpen] = useState<boolean>(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -190,9 +172,12 @@ const Header = ({
             )}
           </div>
 
-          <div className="mt-1 md:hidden">
-            {renderSubscriptionBadge()}
-          </div>
+          {
+            !isEmployee &&
+            <div className="mt-1 md:hidden">
+              {renderSubscriptionBadge()}
+            </div>
+          }
 
           <div className="h-8 w-[1px] bg-slate-200/80 mx-1 hidden sm:block"></div>
 
@@ -215,9 +200,12 @@ const Header = ({
                   <p className="text-xs font-bold text-slate-800 group-hover:text-emerald-600 transition-colors flex items-center justify-end gap-1">
                     {user?.name} <ChevronDown size={12} className={`text-slate-400 group-hover:text-emerald-500 transition-transform duration-300 ${profileOpen ? 'rotate-180' : ''}`} />
                   </p>
-                  <div className="mt-1">
-                    {renderSubscriptionBadge()}
-                  </div>
+                  {
+                    !isEmployee &&
+                    <div className="mt-1">
+                      {renderSubscriptionBadge()}
+                    </div>
+                  }
                 </div>
 
                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold transition-all duration-500 relative ${planStatus === 'expired' || planStatus === 'canceled'

@@ -13,7 +13,7 @@ type Props = {
     theme: string
 }
 
-function LoginView({ themeStyles, showToast, activeScheme, theme }: Props) {
+function EmployeeView({ themeStyles, showToast, activeScheme, theme }: Props) {
     const [showPassword, setShowPassword] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [form, setForm] = useState({
@@ -41,9 +41,9 @@ function LoginView({ themeStyles, showToast, activeScheme, theme }: Props) {
             Cookies.set('token', res?.token, { expires: 365, path: '/' });
 
             // Logika Update: Pengecekan is_active langsung dari response
-            if (res?.user?.is_active && res?.user?.role === 'client') {
+            if (res?.user?.is_active && res?.user?.role === 'employee') {
                 // Redirect dinamis setelah sukses
-                window.location.href = getCorrectPath('/');
+                window.location.href = getCorrectPath('/employee');
             } else {
                 // Jika user belum aktif (misal backend tidak melempar error tapi mereturn data)
                 window.location.reload();
@@ -52,21 +52,8 @@ function LoginView({ themeStyles, showToast, activeScheme, theme }: Props) {
         } catch (e: any) {
             const errorMsg = e?.message || 'Terjadi kesalahan sistem';
             showToast(errorMsg, 'error');
-
-            // SMART UX: Jika error karena belum verifikasi, lempar ke halaman OTP
-            if (errorMsg.toLowerCase().includes('belum aktif') || errorMsg.toLowerCase().includes('otp')) {
-                // Simpan email agar halaman OTP tahu akun mana yang mau diverifikasi
-                if (typeof window !== 'undefined') {
-                    localStorage.setItem('verification_email', form.email);
-                }
-
-                setTimeout(() => {
-                    // Sesuaikan URL ini dengan rute halaman OTP/Verify milikmu
-                    window.location.href = '/auth/verify';
-                }, 1500);
-            } else {
-                setIsLoading(false);
-            }
+        }finally{
+            setIsLoading(false)
         }
     }
 
@@ -98,19 +85,6 @@ function LoginView({ themeStyles, showToast, activeScheme, theme }: Props) {
                 </div>
 
                 <div className="space-y-1">
-                    <div className="flex justify-between items-center mb-1">
-                        <label className="text-[9px] font-bold tracking-widest text-slate-400 uppercase">Kata Sandi</label>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setIsLoading(true);
-                                window.location.href = getCorrectPath('/auth/forgot');
-                            }}
-                            className="text-[10px] font-bold text-blue-500 hover:underline hover:text-blue-400 transition-colors"
-                        >
-                            Lupa Sandi?
-                        </button>
-                    </div>
                     <div className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border ${themeStyles.input} transition-all`}>
                         <Lock size={15} className="text-slate-400" />
                         <input
@@ -150,25 +124,9 @@ function LoginView({ themeStyles, showToast, activeScheme, theme }: Props) {
                 </button>
             </form >
 
-            <div className="mt-6 text-center animate-fadeIn">
-                <p className="text-xs text-slate-400 font-semibold">
-                    Belum memiliki lisensi tenant?{' '}
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setIsLoading(true);
-                            window.location.href = getCorrectPath('/auth/register');
-                        }}
-                        className={`font-black underline underline-offset-4 decoration-2 ${activeScheme.text} hover:opacity-80 transition-opacity`}
-                    >
-                        Daftar Tenant Baru
-                    </button>
-                </p>
-            </div>
-
             {isLoading && <Loading />}
         </div >
     )
 }
 
-export default LoginView
+export default EmployeeView

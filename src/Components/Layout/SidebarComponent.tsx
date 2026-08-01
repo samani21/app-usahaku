@@ -4,7 +4,7 @@ import React, { Dispatch, SetStateAction, useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation';
 import GlassCard from './GlassCard';
 import NavItem from './NavItem';
-import { menuSidebar } from '@/lib/MenuSidebar';
+import { EmployeeMenuSidebar, menuSidebar } from '@/lib/MenuSidebar';
 import { useCorrectPath } from '@/utils/useCorrectPath';
 import { formatImage } from '@/utils/formatImage';
 
@@ -14,9 +14,10 @@ type Props = {
     setLoading: Dispatch<SetStateAction<boolean>>;
     user: any;
     business: any;
+    isEmployee: boolean;
 }
 
-const SidebarComponent = ({ isSidebarOpen, setIsSidebarOpen, setLoading, user, business }: Props) => {
+const SidebarComponent = ({ isSidebarOpen, setIsSidebarOpen, setLoading, user, business, isEmployee = false }: Props) => {
     const pathname = usePathname();
     const [pathNameParent, setPathNameParent] = useState<string>('');
     const [pathNameChild, setPathNameChild] = useState<string>('');
@@ -81,7 +82,7 @@ const SidebarComponent = ({ isSidebarOpen, setIsSidebarOpen, setLoading, user, b
                 <nav className="w-full flex-1 overflow-hidden flex flex-col px-4">
                     <div className='h-full overflow-y-auto no-scrollbar pb-6 space-y-1.5'>
                         {
-                            menuSidebar?.map((ms, i) => {
+                            (isEmployee ? EmployeeMenuSidebar : menuSidebar)?.map((ms, i) => {
                                 const isOpen = pathNameParent === getCorrectPath(`${ms?.href}`);
                                 const isLocked = ms?.label?.toLowerCase() === 'transaksi' && (
                                     business?.verified_status == 0 ||

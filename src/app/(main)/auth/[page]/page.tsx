@@ -11,6 +11,7 @@ import ForgotView from './Components/ForgotView';
 import ResetView from './Components/ResetView';
 import ModalOtp from './Components/ModalOTP';
 import { useCorrectPath } from '@/utils/useCorrectPath';
+import EmployeeView from './Components/EmployeeView';
 type Props = {
     page: string
 }
@@ -106,6 +107,8 @@ function AuthView({ page }: Props) {
         switch (params.page) {
             case "login":
                 return <LoginView activeScheme={activeScheme} showToast={showToast} themeStyles={themeStyles} theme={theme} />;
+            case "employee":
+                return <EmployeeView activeScheme={activeScheme} showToast={showToast} themeStyles={themeStyles} theme={theme} />;
             case "register":
                 return <RegisterView activeScheme={activeScheme} showToast={showToast} themeStyles={themeStyles} theme={theme} setShowOtpModal={setShowOtpModal} />;
             case "forgot":
