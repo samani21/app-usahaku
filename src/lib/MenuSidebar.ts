@@ -138,3 +138,10 @@ export const EmployeeMenuSidebar: menuSide[] = [
         href: '/employee/orders'
     },
 ];
+export const SuperAdminMenuSidebar: menuSide[] = [
+    {
+        Icon: LayoutDashboard,
+        label: "Dashboard",
+        href: '/'
+    },
+];

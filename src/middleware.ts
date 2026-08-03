@@ -7,30 +7,42 @@ export function middleware(req: NextRequest) {
     const hostname = host.split(":")[0];
     const url = req.nextUrl.clone();
 
-    // 1. Abaikan Localhost atau IP (Biar aman saat testing lokal biasa)
+    // 1. Redirect (Mental) dari /super-admin/login ke /auth/login
+    // Diletakkan paling atas agar berlaku di root domain maupun subdomain
+    if (url.pathname.startsWith('/super-admin')) {
+        url.pathname = "/auth/login";
+        return NextResponse.redirect(url); // Gunakan redirect agar URL di browser ikut berubah
+    }
+
+    // 2. Abaikan IP Address (Biar aman saat testing lokal via IP network)
     const isIpAddress = /^[0-9.]+$/.test(hostname);
-    if (isIpAddress || hostname === "localhost") {
+    if (isIpAddress) {
         return NextResponse.next();
     }
 
-    // 2. Logika Root Domain -> Main Store
-    // Biarkan domain utama (store-usahaku.com) berjalan normal
-    if (hostname === ROOT_DOMAIN) {
+    // 3. Logika Root Domain -> Main Store
+    // localhost murni atau store-usahaku.com berjalan normal
+    if (hostname === "localhost" || hostname === ROOT_DOMAIN) {
         return NextResponse.next();
     }
 
-    // 3. Logika Subdomain -> Tenant
-    // Menangkap subdomain (misal: namatoko.store-usahaku.com)
-    if (hostname.endsWith(`.${ROOT_DOMAIN}`)) {
-        const tenant = hostname.replace(`.${ROOT_DOMAIN}`, "");
+    // 4. Logika Subdomain -> Tenant
+    // Menangkap subdomain (misal: namatoko.store-usahaku.com ATAU super-admin.localhost)
+    if (hostname.endsWith(`.${ROOT_DOMAIN}`) || hostname.endsWith(".localhost")) {
+        // Deteksi apakah sedang di local atau production
+        const isLocal = hostname.endsWith(".localhost");
+        const baseDomain = isLocal ? "localhost" : ROOT_DOMAIN;
 
-        // Opsional tapi penting: Jangan jadikan "www" sebagai nama tenant
+        // Ambil nama tenant (contoh: "super-admin" dari "super-admin.localhost")
+        const tenant = hostname.replace(`.${baseDomain}`, "");
+
+        // Jangan jadikan "www" sebagai nama tenant
         if (tenant === "www") {
             return NextResponse.next();
         }
 
-        // Langsung rewrite URL ke folder /[tenant]
-        // Contoh: namatoko.store-usahaku.com -> aplikasi merender /[tenant]/page.tsx
+        // Rewrite URL ke folder /[tenant]
+        // Contoh: super-admin.localhost:3000 -> render /[tenant]/page.tsx (tenant = super-admin)
         url.pathname = `/${tenant}${req.nextUrl.pathname}`;
         return NextResponse.rewrite(url);
     }
