@@ -3,7 +3,7 @@ import { ArrowRight, CheckCircle2, DollarSign, Eye, EyeOff, Loader2, Lock, Mail,
 import React, { useEffect, useState } from 'react'
 import Loading from '@/Components/Loading';
 import { Get } from '@/utils/Get';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { useCorrectPath } from '@/utils/useCorrectPath';
 import { Post } from '@/utils/Post';
@@ -19,14 +19,10 @@ interface Toast {
 }
 
 function SuperAdminAuthView({ page }: Props) {
-    const searchParams = useSearchParams();
     const router = useRouter();
-    const referral = searchParams.get("referral");
 
     const [toasts, setToasts] = useState<Toast[]>([]);
-    const [showOtpModal, setShowOtpModal] = useState<any>(null);
     const [loading, setLoading] = useState<boolean>(false);
-    const [autoResendOtp, setAutoResendOtp] = useState<boolean>(false);
     const { getCorrectPath } = useCorrectPath();
 
     // Tema dikembalikan ke Emerald
@@ -83,8 +79,6 @@ function SuperAdminAuthView({ page }: Props) {
                     router.push(getCorrectPath('/'));
                     return;
                 }
-                setAutoResendOtp(true);
-                setShowOtpModal(res.user);
             }
         } catch (e: any) {
             Cookies.remove('token');
