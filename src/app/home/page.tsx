@@ -16,7 +16,7 @@ export default function LandingPage() {
     const [scrolled, setScrolled] = useState(false);
 
     // SOP 1: Manajemen State Aman
-    const [loadingAction, setLoadingAction] = useState(null);
+    const [loadingAction, setLoadingAction] = useState<string | null>(null);
     const [email, setEmail] = useState('');
 
     // SOP 2: Optimasi Performa
@@ -27,7 +27,7 @@ export default function LandingPage() {
     }, []);
 
     // SOP 3: Antisipasi Error (Navigasi)
-    const handleNavigation = async (path) => {
+    const handleNavigation = async (path: any) => {
         if (loadingAction) return;
 
         try {
@@ -43,7 +43,7 @@ export default function LandingPage() {
     };
 
     // SOP 3: Fallback Form Newsletter
-    const handleNewsletterSubmit = async (e) => {
+    const handleNewsletterSubmit = async (e: any) => {
         e.preventDefault();
         if (!email || loadingAction) return;
 
