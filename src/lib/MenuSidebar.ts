@@ -153,6 +153,10 @@ export const SuperAdminMenuSidebar: menuSide[] = [
                 label: 'Hero',
                 href: '/hero'
             },
+            {
+                label: 'Fitur',
+                href: '/features'
+            },
         ]
     },
 ];
