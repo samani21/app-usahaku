@@ -157,7 +157,7 @@ export default function FeaturesSectionSettings() {
 
     return (
         <SuperAdminLayout>
-            <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20 relative">
+            <div className=" font-sans text-slate-800 pb-20 relative">
 
                 {/* CUSTOM TOAST NOTIFICATION (PENGGANTI ALERT) */}
                 {toast && (
@@ -174,39 +174,9 @@ export default function FeaturesSectionSettings() {
                     </div>
                 )}
 
-                {/* HEADER KAPSUL (Dikembalikan agar tombol Save tidak hilang) */}
-                <header className="bg-white/80 backdrop-blur-xl border-b border-slate-100 sticky top-0 z-40 transition-all duration-300">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={() => router.back()}
-                                className="w-10 h-10 bg-slate-50 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full flex items-center justify-center transition-all active:scale-95 border border-slate-200"
-                            >
-                                <ArrowLeft size={18} />
-                            </button>
-                            <div>
-                                <h1 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
-                                    <Zap className="text-emerald-500" size={20} fill="currentColor" />
-                                    Fitur Utama
-                                </h1>
-                                <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mt-0.5">
-                                    Pengaturan Landing Page
-                                </p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={handleSave}
-                            disabled={isSaving}
-                            className="flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full font-bold text-sm transition-all active:scale-95 shadow-lg shadow-emerald-500/25 disabled:opacity-70 disabled:cursor-not-allowed group"
-                        >
-                            {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                            <span className="hidden sm:inline">{isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}</span>
-                        </button>
-                    </div>
-                </header>
 
                 {/* MAIN CONTENT (SPLIT LAYOUT) */}
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <div className="py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
                     {/* BAGIAN KIRI: FORM EDITOR */}
                     <div className="lg:col-span-6 space-y-6">
@@ -214,9 +184,19 @@ export default function FeaturesSectionSettings() {
 
                             {/* 1. Pengaturan Header Fitur */}
                             <div className="mb-10">
-                                <h2 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-6 border-b border-slate-100 pb-4 flex items-center gap-2">
-                                    <Type size={16} /> Header Section
-                                </h2>
+                                <div className="flex justify-between items-center mb-8 border-b border-slate-100 pb-4">
+                                    <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">
+                                        Header Section
+                                    </h2>
+                                    <button
+                                        onClick={handleSave}
+                                        disabled={isLoading}
+                                        className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-full flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                                    >
+                                        {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                                        {isLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
+                                    </button>
+                                </div>
                                 <div className="space-y-6">
                                     <div>
                                         <label className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-500 mb-2 pl-4">
