@@ -77,7 +77,7 @@ export default function FeaturesSectionSettings() {
     useEffect(() => {
         const fetchFeatureData = async () => {
             try {
-                const result = await Get<{ success: boolean; data: any }>('super-admin/hero-feature/show');
+                const result = await Get<{ success: boolean; data: any }>('super-admin/feature/show');
 
                 if (result?.success && result.data) {
                     setFormData({
@@ -103,7 +103,7 @@ export default function FeaturesSectionSettings() {
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            const result = await Post('super-admin/hero-feature/update', formData);
+            const result = await Post('super-admin/feature/update', formData);
 
             if (result) {
                 showToast('Perubahan Bagian Fitur Tersimpan.', 'success');

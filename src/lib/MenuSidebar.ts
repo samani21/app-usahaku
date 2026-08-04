@@ -157,6 +157,10 @@ export const SuperAdminMenuSidebar: menuSide[] = [
                 label: 'Fitur',
                 href: '/features'
             },
+            {
+                label: 'Harga',
+                href: '/pricing'
+            },
         ]
     },
 ];
