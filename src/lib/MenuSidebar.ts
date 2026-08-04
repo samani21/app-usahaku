@@ -154,7 +154,7 @@ export const SuperAdminMenuSidebar: menuSide[] = [
                 href: '/hero'
             },
             {
-                label: 'Fitur',
+                label: 'Feature',
                 href: '/features'
             },
             {
@@ -164,6 +164,10 @@ export const SuperAdminMenuSidebar: menuSide[] = [
             {
                 label: 'CTA',
                 href: '/cta'
+            },
+            {
+                label: 'Footer',
+                href: '/footer'
             },
         ]
     },
