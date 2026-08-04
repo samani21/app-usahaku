@@ -1,4 +1,4 @@
-import { Database, Gift, Globe, LayoutDashboard, Radio, ScrollText, Store } from "lucide-react";
+import { Database, Gift, Globe, Layers, LayoutDashboard, Radio, ScrollText, Store } from "lucide-react";
 import { ReactElement } from "react";
 
 interface child {
@@ -143,5 +143,16 @@ export const SuperAdminMenuSidebar: menuSide[] = [
         Icon: LayoutDashboard,
         label: "Dashboard",
         href: '/'
+    },
+    {
+        Icon: Layers,
+        label: "Landing Page",
+        href: '/landing-page',
+        child: [
+            {
+                label: 'Hero',
+                href: '/hero'
+            },
+        ]
     },
 ];
