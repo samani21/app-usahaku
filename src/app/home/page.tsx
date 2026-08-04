@@ -10,24 +10,108 @@ import {
     ShoppingBag, MapPin, Smartphone, Fingerprint
 } from 'lucide-react';
 
+// Import Utility Fetcher (Sesuaikan dengan path project-mu)
+import { Get } from '@/utils/Get';
+import { Icon } from '@iconify/react';
+
+// ==========================================
+// 1. KOMPONEN SKELETON LOADING (MODERN UI)
+// ==========================================
+const LandingSkeleton = () => (
+    <div className="min-h-screen bg-[#FAFAFA] w-full overflow-hidden animate-pulse">
+        {/* Skeleton Header */}
+        <div className="w-full h-24 px-6 md:px-8 flex justify-between items-center max-w-7xl mx-auto">
+            <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-slate-200 rounded-xl"></div>
+                <div className="w-32 h-8 bg-slate-200 rounded-lg"></div>
+            </div>
+            <div className="hidden md:flex gap-8">
+                <div className="w-16 h-4 bg-slate-200 rounded-full"></div>
+                <div className="w-16 h-4 bg-slate-200 rounded-full"></div>
+                <div className="w-16 h-4 bg-slate-200 rounded-full"></div>
+                <div className="w-16 h-4 bg-slate-200 rounded-full"></div>
+            </div>
+            <div className="w-36 h-12 bg-slate-200 rounded-full hidden md:block"></div>
+        </div>
+
+        {/* Skeleton Hero Section */}
+        <div className="max-w-7xl mx-auto px-6 md:px-8 pt-20 pb-20 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <div className="space-y-6 flex flex-col items-center lg:items-start">
+                <div className="w-48 h-8 bg-slate-200 rounded-full mb-4"></div>
+                <div className="w-full max-w-md h-16 bg-slate-200 rounded-2xl"></div>
+                <div className="w-3/4 max-w-sm h-16 bg-slate-200 rounded-2xl"></div>
+                <div className="w-full max-w-lg h-24 bg-slate-200 rounded-xl mt-6"></div>
+                <div className="flex gap-4 mt-8 w-full justify-center lg:justify-start">
+                    <div className="w-48 h-14 bg-slate-200 rounded-xl"></div>
+                    <div className="w-40 h-14 bg-slate-200 rounded-xl"></div>
+                </div>
+            </div>
+            <div className="w-full h-[500px] bg-slate-200 rounded-[2.5rem] shadow-sm"></div>
+        </div>
+    </div>
+);
+
+// ==========================================
+// 2. KOMPONEN UTAMA LANDING PAGE
+// ==========================================
 export default function LandingPage() {
     const router = useRouter();
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
+    // State UI & UX
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
-
-    // SOP 1: Manajemen State Aman
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
     const [email, setEmail] = useState('');
 
-    // SOP 2: Optimasi Performa
+    // State Data Fetching
+    const [isPageLoading, setIsPageLoading] = useState(true);
+    const [pageData, setPageData] = useState<any>({
+        hero: {},
+        ecommerce: {},
+        footer: {}
+    });
+
+    // ==========================================
+    // INITIALIZATION & SINGLE FETCH API
+    // ==========================================
     useEffect(() => {
+        // Deteksi Scroll untuk Header
         const handleScroll = () => setScrolled(window.scrollY > 20);
         window.addEventListener('scroll', handleScroll, { passive: true });
+
+        // Fetch 1 Endpoint Publik (Aggregator/BFF)
+        const fetchLandingData = async () => {
+            try {
+                // Hit ke route public yang kita buat di Laravel
+                const result = await Get<{ success: boolean; data: any }>('landing-page');
+
+                if (result?.success && result.data) {
+                    setPageData({
+                        hero: result.data.hero || {},
+                        feature: result.data.feature || {},
+                        pricing: result.data.pricing || {},
+                        ecommerce: result.data.ecommerce || {},
+                        footer: result.data.footer || {}
+                    });
+                }
+            } catch (error) {
+                console.error("Gagal memuat data landing page:", error);
+                // Biarkan pakai data kosong {}, karena di UI sudah kita handle dengan || 'Fallback Text'
+            } finally {
+                // Jeda sedikit untuk memastikan font & aset lain ikut ke-render estetik (0.8 detik)
+                setTimeout(() => setIsPageLoading(false), 800);
+            }
+        };
+
+        fetchLandingData();
+
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    // SOP 3: Antisipasi Error (Navigasi)
-    const handleNavigation = async (path: any) => {
+    // ==========================================
+    // HANDLERS
+    // ==========================================
+    const handleNavigation = async (path: string) => {
         if (loadingAction) return;
 
         try {
@@ -42,8 +126,7 @@ export default function LandingPage() {
         }
     };
 
-    // SOP 3: Fallback Form Newsletter
-    const handleNewsletterSubmit = async (e: any) => {
+    const handleNewsletterSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!email || loadingAction) return;
 
@@ -60,6 +143,20 @@ export default function LandingPage() {
         }
     };
 
+    // ==========================================
+    // RENDER: TAMPILKAN SKELETON JIKA LOADING
+    // ==========================================
+    if (isPageLoading) {
+        return <LandingSkeleton />;
+    }
+
+    // Ekstraksi data aman dengan fallback bawaan database / statik
+    const hero = pageData.hero;
+    const feature = pageData.feature;
+    const pricing = pageData.pricing;
+    const ecom = pageData.ecommerce;
+    const footer = pageData.footer;
+
     return (
         <div className="min-h-screen bg-[#FAFAFA] font-sans text-slate-800 selection:bg-[#10B981]/30 selection:text-slate-900 overflow-x-hidden relative">
 
@@ -71,11 +168,11 @@ export default function LandingPage() {
                     }`}>
                     <div className="flex justify-between items-center">
                         <div className="flex items-center gap-2.5 cursor-pointer group" onClick={() => handleNavigation('/')}>
-                            <div className="p-2.5 rounded-xl bg-gradient-to-br from-[#10B981] to-emerald-600 text-white shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/40 transition-all duration-300">
-                                <Rocket size={24} className="group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform" />
+                            <div className="group-hover:shadow-emerald-500/40 transition-all duration-300">
+                                <img src={`${baseUrl}/logo_usahaku.png`} className='w-12 rounded-xl' />
                             </div>
                             <span className="text-2xl font-extrabold text-slate-900 tracking-tight">
-                                Usaha<span className="text-transparent bg-clip-text bg-gradient-to-r from-[#10B981] to-emerald-500">Ku</span>
+                                {footer.brand_name || 'Usaha'}<span className="text-transparent bg-clip-text bg-gradient-to-r from-[#10B981] to-emerald-500">{footer.brand_highlight || 'Ku'}</span>
                             </span>
                         </div>
 
@@ -88,7 +185,7 @@ export default function LandingPage() {
                             <button
                                 onClick={() => handleNavigation('/login')}
                                 disabled={loadingAction === '/login'}
-                                className="group relative inline-flex items-center justify-center px-6 py-2.5 text-sm font-semibold text-white transition-all duration-200 bg-slate-900 rounded-full hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 disabled:opacity-70 disabled:cursor-not-allowed"
+                                className="group relative inline-flex items-center justify-center px-6 py-2.5 text-sm font-semibold text-white transition-all duration-200 bg-slate-900 rounded-full hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 disabled:opacity-70 disabled:cursor-not-allowed shadow-md"
                             >
                                 {loadingAction === '/login' ? (
                                     <Loader2 size={16} className="animate-spin" />
@@ -112,7 +209,7 @@ export default function LandingPage() {
                     </div>
 
                     {isMobileMenuOpen && (
-                        <div className="md:hidden absolute top-full left-0 right-0 mt-4 bg-white/95 backdrop-blur-xl border border-slate-200 shadow-2xl rounded-3xl overflow-hidden z-50">
+                        <div className="md:hidden absolute top-full left-0 right-0 mt-4 bg-white/95 backdrop-blur-xl border border-slate-200 shadow-2xl rounded-3xl overflow-hidden z-50 animate-in slide-in-from-top-2 duration-300">
                             <div className="px-6 py-8 space-y-4">
                                 <a href="#beranda" onClick={() => setIsMobileMenuOpen(false)} className="block text-lg font-semibold text-slate-800 hover:text-[#10B981] transition-colors">Beranda</a>
                                 <a href="#fitur" onClick={() => setIsMobileMenuOpen(false)} className="block text-lg font-semibold text-slate-800 hover:text-[#10B981] transition-colors">Fitur</a>
@@ -136,28 +233,28 @@ export default function LandingPage() {
 
             {/* 2. HERO SECTION */}
             <section id="beranda" className="relative pt-40 pb-20 lg:pt-56 lg:pb-32 overflow-hidden">
-                <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3">
+                <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 animate-in fade-in duration-1000">
                     <div className="w-[600px] h-[600px] bg-gradient-to-tr from-[#10B981]/20 to-emerald-200/20 rounded-full blur-[100px] opacity-70 mix-blend-multiply pointer-events-none"></div>
                 </div>
-                <div className="absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/3">
+                <div className="absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/3 animate-in fade-in duration-1000">
                     <div className="w-[500px] h-[500px] bg-gradient-to-bl from-blue-100/40 to-[#10B981]/10 rounded-full blur-[80px] opacity-70 mix-blend-multiply pointer-events-none"></div>
                 </div>
 
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 animate-in slide-in-from-bottom-8 duration-700">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-8 items-center">
                         <div className="text-center lg:text-left max-w-2xl mx-auto lg:mx-0">
-                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 shadow-sm mb-8 animate-fade-in-up">
+                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 shadow-sm mb-8">
                                 <Sparkles size={16} className="text-[#10B981]" />
-                                <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Era Baru Bisnis Digital</span>
+                                <span className="text-xs font-bold uppercase tracking-wider text-slate-700">{hero?.tagline || "Era Baru Bisnis Digital"}</span>
                             </div>
 
                             <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-slate-900 leading-[1.1] mb-8 tracking-tight">
-                                Kelola, Jual & <br className="hidden md:block" />
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#10B981] to-emerald-400">Hasilkan Lebih.</span>
+                                {hero?.headline_1 || "Kelola, Jual &"} <br className="hidden md:block" />
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#10B981] to-emerald-400">{hero?.headline_2 || "Hasilkan Lebih."}</span>
                             </h1>
 
                             <p className="text-lg md:text-xl text-slate-600 mb-10 leading-relaxed font-medium max-w-xl mx-auto lg:mx-0">
-                                Ekosistem all-in-one dengan kasir pintar, etalase kustom, dan sistem afiliasi cerdas yang siap mengalirkan omset ke rekening Anda.
+                                {hero?.description || 'Ekosistem all-in-one dengan kasir pintar, etalase kustom, dan sistem afiliasi cerdas yang siap mengalirkan omset ke rekening Anda.'}
                             </p>
 
                             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
@@ -167,7 +264,7 @@ export default function LandingPage() {
                                     className="px-8 py-4 rounded-xl text-white font-bold text-lg flex items-center justify-center gap-2 bg-gradient-to-r from-[#10B981] to-emerald-600 shadow-xl shadow-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/40 transition-all transform hover:-translate-y-1 disabled:opacity-70 disabled:transform-none"
                                 >
                                     {loadingAction === '/register' ? <Loader2 size={20} className="animate-spin" /> : (
-                                        <>Coba Gratis 14 Hari <ArrowRight size={20} /></>
+                                        <>{hero?.cta_text || "Coba Gratis 14 Hari"} <ArrowRight size={20} /></>
                                     )}
                                 </button>
                                 <a
@@ -232,53 +329,22 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* 3. FEATURE SECTION - DIROMBAK TOTAL SESUAI SPESIFIKASI */}
+            {/* 3. FEATURE SECTION */}
             <section id="fitur" className="py-32 bg-white relative">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center max-w-3xl mx-auto mb-20">
+                    <div className="text-center max-w-3xl mx-auto mb-20 animate-in slide-in-from-bottom-4 duration-700">
                         <h2 className="text-[#10B981] font-bold tracking-widest uppercase text-xs mb-4">Fitur Skala Enterprise</h2>
-                        <h3 className="text-3xl md:text-5xl font-extrabold text-slate-900 mb-6 tracking-tight">Kekuatan di Balik UsahaKu</h3>
-                        <p className="text-xl text-slate-500 leading-relaxed">Dirancang dengan presisi tingkat tinggi untuk meminimalisir *human error* dan memaksimalkan kecepatan transaksi bisnis Anda.</p>
+                        <h3 className="text-3xl md:text-5xl font-extrabold text-slate-900 mb-6 tracking-tight">{feature?.section_title || `Kekuatan di Balik ${footer.brand_name || 'UsahaKu'}`}</h3>
+                        <p className="text-xl text-slate-500 leading-relaxed">{feature?.section_desc || "Dirancang dengan presisi tingkat tinggi untuk meminimalisir *human error* dan memaksimalkan kecepatan transaksi bisnis Anda."}</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {[
-                            {
-                                icon: Smartphone,
-                                title: "Social Commerce & Feed Lokasi",
-                                desc: "Jangkau pelanggan di radius 50KM lewat Geo-Feed canggih. Posting promo, Smart Stories, dan biarkan pembeli checkout langsung dari postingan (Shoppable Content)."
-                            },
-                            {
-                                icon: ShieldCheck,
-                                title: "Sistem Kebal Double-Booking",
-                                desc: "Pelindung canggih (Anti-Race Condition) yang otomatis mengunci sisa stok terakhir. Mencegah pesanan ganda masuk saat dua kasir checkout di detik yang sama."
-                            },
-                            {
-                                icon: Receipt,
-                                title: "Kasir Digital & Ledger Cerdas",
-                                desc: "POS terintegrasi dengan pemindai QR Code secepat kilat. Buku besar stok (Ledger) tercatat otomatis (In/Out) tanpa celah manipulasi data."
-                            },
-                            {
-                                icon: TrendingUp,
-                                title: "Afiliasi & Komisi Instan",
-                                desc: "Ubah pelanggan setia menjadi promotor afiliasi. Pantau komisi real-time, simpan rekening favorit, dan tarik saldo instan langsung dari profil."
-                            },
-                            {
-                                icon: MapPin,
-                                title: "Manajemen Multi-Cabang Akurat",
-                                desc: "Kelola puluhan cabang dalam satu sistem terpusat. Dilengkapi peta lokasi akurat dan deteksi jam buka-tutup otomatis untuk pelanggan."
-                            },
-                            {
-                                icon: Fingerprint,
-                                title: "Manajemen Karyawan (Magic Login)",
-                                desc: "Buat akses kasir baru tanpa ribet mikir password (Magic Credential). Akses karyawan diisolasi ketat per cabang demi keamanan data tingkat tinggi."
-                            }
-                        ].map((feature, idx) => (
+                        {feature?.items.map((feature: any, idx: number) => (
                             <div key={idx} className="group relative bg-[#FAFAFA] rounded-3xl p-8 hover:bg-white transition-all duration-300 border border-transparent hover:border-slate-100 hover:shadow-2xl hover:shadow-slate-200/50">
                                 <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#10B981]/5 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                 <div className="relative z-10">
                                     <div className="w-14 h-14 rounded-2xl bg-white shadow-md border border-slate-100 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
-                                        <feature.icon size={28} className="text-[#10B981]" />
+                                        <Icon icon={feature?.icon} className='text-[#10B981]' fontSize={24} />
                                     </div>
                                     <h4 className="text-xl font-bold text-slate-900 mb-3">{feature.title}</h4>
                                     <p className="text-slate-500 leading-relaxed text-base">{feature.desc}</p>
@@ -299,7 +365,6 @@ export default function LandingPage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto items-stretch">
-
                         <div className="bg-white rounded-3xl p-10 shadow-lg border border-slate-100 hover:shadow-xl transition-all flex flex-col">
                             <div className="mb-8">
                                 <div className="inline-block px-4 py-1.5 bg-slate-100 rounded-full text-slate-700 text-sm font-bold mb-4">Uji Coba Penuh</div>
@@ -308,33 +373,26 @@ export default function LandingPage() {
                             </div>
                             <div className="mb-8 flex items-baseline gap-2">
                                 <span className="text-6xl font-extrabold text-slate-900">Rp 0</span>
-                                <span className="text-lg font-medium text-slate-500">/ 14 Hari</span>
+                                <span className="text-lg font-medium text-slate-500">/ {pricing?.trial_days || 14} Hari</span>
                             </div>
                             <ul className="space-y-5 mb-8 flex-grow">
-                                {[
-                                    'Buka 100% Semua Fitur Aplikasi',
-                                    'Bebas Kelola Produk & Outlet Tanpa Batas',
-                                    'Akses Sistem Kasir (POS) & Laporan',
-                                    'Tampil di E-commerce UMKM Lokal'
-                                ].map((feature, index) => (
-                                    <li key={index} className="flex items-start gap-4">
+                                {pricing?.trial_features.map((f: string, i: number) => (
+                                    <li key={i} className="flex items-start gap-4">
                                         <CheckCircle2 size={24} className="text-[#10B981] flex-shrink-0" />
-                                        <span className="text-slate-600 font-medium">{feature}</span>
+                                        <span className="text-slate-600 font-medium">{f}</span>
                                     </li>
                                 ))}
                             </ul>
-
                             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 items-start mb-8">
                                 <Info size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
                                 <p className="text-xs text-amber-800 font-medium leading-relaxed">
-                                    <b>Catatan:</b> Trial 14 hari tidak memerlukan kartu kredit. Setelah masa trial habis, data Anda aman dan cukup berlangganan untuk melanjutkan.
+                                    <b>Catatan:</b> Trial tidak butuh kartu kredit. Setelah masa trial habis, data aman.
                                 </p>
                             </div>
-
                             <button
                                 onClick={() => handleNavigation('/register')}
                                 disabled={loadingAction === '/register'}
-                                className="w-full py-4 flex justify-center items-center rounded-xl font-bold text-slate-700 bg-slate-50 border-2 border-slate-200 hover:bg-slate-100 transition-colors mt-auto disabled:opacity-70"
+                                className="w-full py-4 rounded-xl font-bold text-slate-700 bg-slate-50 border-2 border-slate-200 hover:bg-slate-100 transition-colors mt-auto disabled:opacity-70 flex justify-center items-center"
                             >
                                 {loadingAction === '/register' ? <Loader2 size={20} className="animate-spin" /> : 'Mulai Trial Sekarang'}
                             </button>
@@ -344,59 +402,46 @@ export default function LandingPage() {
                             <div className="absolute top-0 right-8 -translate-y-1/2 bg-gradient-to-r from-[#10B981] to-emerald-400 text-white text-sm font-bold px-6 py-1.5 rounded-full shadow-lg z-10">
                                 PILIHAN TERBAIK
                             </div>
-
                             <div className="bg-slate-950 rounded-[calc(2rem-2px)] p-10 h-full relative overflow-hidden flex flex-col">
                                 <div className="absolute top-0 right-0 w-64 h-64 bg-[#10B981]/10 rounded-full blur-3xl"></div>
-
                                 <div className="relative z-10 flex flex-col h-full">
                                     <div className="mb-8">
                                         <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 text-sm font-bold mb-4">
                                             <Sparkles size={14} /> Profesional
                                         </div>
                                         <h4 className="text-3xl font-bold text-white mb-2">Mitra UMKM</h4>
-                                        <p className="text-slate-400">Amankan data usaha Anda & buka keran penghasilan tambahan.</p>
+                                        <p className="text-slate-400">Amankan data usaha & buka keran penghasilan tambahan.</p>
                                     </div>
-
                                     <div className="mb-10">
-                                        <div className="text-slate-500 line-through text-xl font-medium mb-1 decoration-red-500/70 decoration-2">
-                                            Rp 50.000
-                                        </div>
+                                        <div className="text-slate-500 line-through text-xl font-medium mb-1 decoration-red-500/70 decoration-2">Rp {pricing?.original_price?.toLocaleString("id-ID") || "50.000"}</div>
                                         <div className="flex items-baseline gap-2">
-                                            <span className="text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-emerald-200">Rp 35k</span>
+                                            <span className="text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-emerald-200">Rp {((pricing?.pro_price ?? 35000) / 1000)}k</span>
                                             <span className="text-lg font-medium text-slate-400">/ bln</span>
                                         </div>
                                     </div>
-
                                     <ul className="space-y-5 mb-10 flex-grow">
-                                        {[
-                                            'Amankan Akses Seluruh Fitur (Permanen)',
-                                            'Aktifkan Hak Komisi Afiliasi (20% - 30%)',
-                                            'Posisi Prioritas di Pencarian E-commerce',
-                                            'Customer Support Prioritas (VIP)'
-                                        ].map((feature, index) => (
-                                            <li key={index} className="flex items-start gap-4">
+                                        {pricing?.pro_features.map((f: string, i: number) => (
+                                            <li key={i} className="flex items-start gap-4">
                                                 <CheckCircle2 size={24} className="text-emerald-400 flex-shrink-0" />
-                                                <span className="text-slate-300 font-medium">{feature}</span>
+                                                <span className="text-slate-300 font-medium">{f}</span>
                                             </li>
                                         ))}
                                     </ul>
-
                                     <button
                                         onClick={() => handleNavigation('/register?plan=pro')}
                                         disabled={loadingAction === '/register?plan=pro'}
-                                        className="w-full py-4 flex justify-center items-center rounded-xl font-bold text-slate-900 bg-gradient-to-r from-[#10B981] to-emerald-400 hover:from-emerald-400 hover:to-[#10B981] shadow-lg shadow-emerald-500/25 transition-all hover:scale-[1.02] mt-auto disabled:opacity-70 disabled:hover:scale-100"
+                                        className="w-full py-4 rounded-xl font-bold text-slate-900 bg-gradient-to-r from-[#10B981] to-emerald-400 hover:scale-[1.02] transition-transform mt-auto disabled:opacity-70 disabled:hover:scale-100 flex justify-center items-center shadow-lg shadow-emerald-500/25"
                                     >
                                         {loadingAction === '/register?plan=pro' ? <Loader2 size={20} className="animate-spin" /> : 'Lanjutkan Berlangganan'}
                                     </button>
                                 </div>
                             </div>
                         </div>
-
                     </div>
                 </div>
             </section>
 
-            {/* 5. CTA E-COMMERCE SECTION */}
+            {/* 5. CTA E-COMMERCE SECTION (DATA DINAMIS) */}
             <section id="ecommerce" className="py-24 relative overflow-hidden border-t border-slate-200">
                 <div className="absolute inset-0 bg-slate-900"></div>
                 <div className="absolute inset-0 opacity-40">
@@ -409,10 +454,10 @@ export default function LandingPage() {
                         <ShoppingBag size={32} />
                     </div>
                     <h2 className="text-4xl md:text-6xl font-extrabold text-white mb-8 tracking-tight leading-tight">
-                        E-commerce <span className="text-emerald-400">UMKM Lokal.</span>
+                        {ecom.headline_1 || 'E-commerce'} <span className="text-emerald-400">{ecom.headline_2 || 'UMKM Lokal.'}</span>
                     </h2>
                     <p className="text-xl text-slate-300 mb-12 max-w-2xl mx-auto font-medium leading-relaxed">
-                        Temukan dan dukung berbagai produk unggulan dari UMKM yang ada di sekitar lokasi Anda. Belanja mudah, bisnis lokal berkembang.
+                        {ecom.description || 'Temukan dan dukung berbagai produk unggulan dari UMKM yang ada di sekitar lokasi Anda. Belanja mudah, bisnis lokal berkembang.'}
                     </p>
                     <div className="flex flex-col sm:flex-row gap-5 justify-center">
                         <button
@@ -420,34 +465,36 @@ export default function LandingPage() {
                             disabled={loadingAction === '/ecommerce'}
                             className="px-8 py-4 flex justify-center items-center rounded-xl bg-[#10B981] hover:bg-emerald-400 text-slate-900 font-bold text-lg shadow-xl transition-all hover:scale-105 disabled:opacity-70 disabled:hover:scale-100"
                         >
-                            {loadingAction === '/ecommerce' ? <Loader2 size={24} className="animate-spin" /> : 'Mulai Belanja'}
+                            {loadingAction === '/ecommerce' ? <Loader2 size={24} className="animate-spin" /> : (ecom.btn_primary || 'Mulai Belanja')}
                         </button>
                         <button className="px-8 py-4 rounded-xl bg-slate-800/50 backdrop-blur-md border border-slate-700 text-white font-bold text-lg hover:bg-slate-800 transition-colors flex items-center justify-center gap-2">
-                            <MapPin size={20} /> Deteksi Lokasi Saya
+                            <MapPin size={20} /> {ecom.btn_secondary || 'Deteksi Lokasi Saya'}
                         </button>
                     </div>
                 </div>
             </section>
 
-            {/* 6. FOOTER SECTION */}
+            {/* 6. FOOTER SECTION (DATA DINAMIS) */}
             <footer className="bg-slate-950 text-slate-400 py-20 border-t border-slate-900 relative z-10">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-12 lg:gap-8 mb-16">
 
                         <div className="md:col-span-5 lg:col-span-4">
                             <div className="flex items-center gap-2.5 mb-8 cursor-pointer" onClick={() => handleNavigation('/')}>
-                                <div className="p-2 rounded-lg bg-[#10B981]/20 text-[#10B981]">
-                                    <Rocket size={24} />
+                                <div className="rounded-lg bg-[#10B981]/20 text-[#10B981]">
+                                    <img src={`${baseUrl}/logo_usahaku.png`} className='w-12 rounded-lg' />
                                 </div>
-                                <span className="text-2xl font-bold text-white tracking-tight">Usaha<span className="text-[#10B981]">Ku</span></span>
+                                <span className="text-2xl font-bold text-white tracking-tight">
+                                    {footer.brand_name || 'Usaha'}<span className="text-[#10B981]">{footer.brand_highlight || 'Ku'}</span>
+                                </span>
                             </div>
                             <p className="text-slate-400 mb-8 leading-relaxed text-lg pe-8">
-                                Merancang ulang cara Anda berbisnis. Ekosistem digital cerdas untuk pengusaha modern dan afiliator.
+                                {footer.brand_desc || 'Merancang ulang cara Anda berbisnis. Ekosistem digital cerdas untuk pengusaha modern dan afiliator.'}
                             </p>
                             <div className="flex space-x-5">
-                                <a href="#" className="p-2 rounded-full bg-slate-900 hover:bg-[#10B981] hover:text-white transition-all"><Facebook size={18} /></a>
-                                <a href="#" className="p-2 rounded-full bg-slate-900 hover:bg-[#10B981] hover:text-white transition-all"><Twitter size={18} /></a>
-                                <a href="#" className="p-2 rounded-full bg-slate-900 hover:bg-[#10B981] hover:text-white transition-all"><Instagram size={18} /></a>
+                                {footer.social_fb && <a href={footer.social_fb} target="_blank" rel="noreferrer" className="p-2 rounded-full bg-slate-900 hover:bg-[#10B981] hover:text-white transition-all"><Facebook size={18} /></a>}
+                                {footer.social_tw && <a href={footer.social_tw} target="_blank" rel="noreferrer" className="p-2 rounded-full bg-slate-900 hover:bg-[#10B981] hover:text-white transition-all"><Twitter size={18} /></a>}
+                                {footer.social_ig && <a href={footer.social_ig} target="_blank" rel="noreferrer" className="p-2 rounded-full bg-slate-900 hover:bg-[#10B981] hover:text-white transition-all"><Instagram size={18} /></a>}
                             </div>
                         </div>
 
@@ -474,7 +521,6 @@ export default function LandingPage() {
                         <div className="md:col-span-12 lg:col-span-3">
                             <h4 className="text-white font-bold text-lg mb-6 tracking-wide">Akses Eksklusif</h4>
                             <p className="text-slate-400 mb-6 font-medium">Dapatkan insight bisnis premium langsung di kotak masuk Anda.</p>
-
                             <form className="relative" onSubmit={handleNewsletterSubmit}>
                                 <input
                                     type="email"
@@ -494,32 +540,32 @@ export default function LandingPage() {
                                 </button>
                             </form>
                         </div>
-
                     </div>
 
                     <div className="border-t border-slate-800/50 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-                        <p className="text-slate-500 font-medium">
-                            &copy; {new Date().getFullYear()} UsahaKu Inc. Hak Cipta Dilindungi.
+                        <p className="text-slate-500 font-medium text-sm">
+                            &copy; {new Date().getFullYear()} {footer.copyright || 'UsahaKu Inc. Hak Cipta Dilindungi.'}
                         </p>
-                        <div className="flex items-center gap-2 font-medium text-slate-500">
+                        <div className="flex items-center gap-2 font-medium text-slate-500 text-sm">
                             Didesain dengan <span className="text-[#10B981]">presisi</span> untuk Anda.
                         </div>
                     </div>
                 </div>
             </footer>
 
-            {/* FLOATING ACTION BUTTON (E-COMMERCE UMKM) */}
-            <a
-                href="#ecommerce"
-                className="fixed bottom-6 right-6 z-[60] bg-emerald-500 hover:bg-emerald-600 text-white p-4 rounded-full shadow-2xl shadow-emerald-500/30 transition-transform hover:scale-105 active:scale-95 flex items-center gap-3 border-2 border-white group"
-                title="E-commerce UMKM Lokal"
-            >
-                <ShoppingBag size={24} />
-                <span className="hidden md:block font-black uppercase tracking-widest text-xs pr-2 overflow-hidden whitespace-nowrap max-w-0 group-hover:max-w-xs transition-all duration-300 ease-in-out">
-                    E-commerce UMKM
-                </span>
-            </a>
-
+            {/* FLOATING ACTION BUTTON (DATA DINAMIS) */}
+            {footer.show_fab !== false && (
+                <a
+                    href="#ecommerce"
+                    className="fixed bottom-6 right-6 z-[60] bg-emerald-500 hover:bg-emerald-600 text-white p-4 rounded-full shadow-2xl shadow-emerald-500/30 transition-transform hover:scale-105 active:scale-95 flex items-center gap-3 border-2 border-white group animate-in zoom-in duration-500"
+                    title={footer.fab_text || 'E-commerce UMKM'}
+                >
+                    <ShoppingBag size={24} />
+                    <span className="hidden md:block font-black uppercase tracking-widest text-xs pr-2 overflow-hidden whitespace-nowrap max-w-0 group-hover:max-w-xs transition-all duration-300 ease-in-out">
+                        {footer.fab_text || 'E-commerce UMKM'}
+                    </span>
+                </a>
+            )}
         </div>
     );
 }

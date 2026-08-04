@@ -37,7 +37,7 @@ interface ToastState {
 
 export default function FooterSectionSettings() {
     const router = useRouter();
-
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
     // ==========================================
     // STATE MANAGEMENT
     // ==========================================
@@ -299,8 +299,8 @@ export default function FooterSectionSettings() {
                             {/* FOOTER SECTION */}
                             <div className="border-t border-slate-800 pt-8 mt-auto relative z-10">
                                 <div className="flex items-center gap-2.5 mb-6">
-                                    <div className="p-2 rounded-lg bg-[#10B981]/20 text-[#10B981]">
-                                        <Rocket size={20} />
+                                    <div className="">
+                                        <img src={baseUrl + '/logo_usahaku.png'} className='w-12 rounded-lg' />
                                     </div>
                                     <span className="text-xl font-bold text-white tracking-tight">
                                         {formData.brand_name || 'Brand'}<span className="text-[#10B981]">{formData.brand_highlight || ''}</span>
