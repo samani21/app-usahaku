@@ -3,8 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    Save, Zap, Loader2, ArrowLeft,
-    Plus, Trash2, AlignLeft, Type, LayoutGrid, Link, CheckCircle, XCircle, AlertCircle
+    Save, Loader2, Plus, Trash2, AlignLeft, Type, LayoutGrid, Link, CheckCircle, XCircle, AlertCircle
 } from 'lucide-react';
 import { Icon } from '@iconify/react';
 
@@ -12,22 +11,7 @@ import { Icon } from '@iconify/react';
 import { Get } from '@/utils/Get';
 import { Post } from '@/utils/Post';
 import SuperAdminLayout from '../../Components/SuperAdminLayout';
-
-// ==========================================
-// TYPESCRIPT INTERFACES
-// ==========================================
-interface FeatureItem {
-    id: number | string;
-    icon: string;
-    title: string;
-    desc: string;
-}
-
-interface FormDataState {
-    section_title: string;
-    section_desc: string;
-    items: FeatureItem[];
-}
+import { Feature, Items } from '@/app/home/Components/type';
 
 interface ToastState {
     message: string;
@@ -59,7 +43,7 @@ export default function FeaturesSectionSettings() {
     // State untuk Custom Toast Notification (Pengganti Alert)
     const [toast, setToast] = useState<ToastState | null>(null);
 
-    const [formData, setFormData] = useState<FormDataState>({
+    const [formData, setFormData] = useState<Feature>({
         section_title: '',
         section_desc: '',
         items: []
@@ -72,14 +56,16 @@ export default function FeaturesSectionSettings() {
     };
 
     // ==========================================
-    // FETCH DATA API
+    // FETCH DATA API (SAFE MOUNT PATTERN)
     // ==========================================
     useEffect(() => {
+        let isMounted = true; // SOP: Cegah bug memory leak saat pindah halaman cepat
+
         const fetchFeatureData = async () => {
             try {
-                const result = await Get<{ success: boolean; data: any }>('super-admin/feature/show');
+                const result = await Get<{ success: boolean; data: Feature }>('super-admin/feature/show');
 
-                if (result?.success && result.data) {
+                if (isMounted && result?.success && result.data) {
                     setFormData({
                         section_title: result.data.section_title || '',
                         section_desc: result.data.section_desc || '',
@@ -87,44 +73,60 @@ export default function FeaturesSectionSettings() {
                     });
                 }
             } catch (error) {
-                console.error("Kesalahan jaringan saat memuat data:", error);
-                showToast("Gagal memuat data dari server.", "error");
+                if (isMounted) {
+                    console.error("Kesalahan jaringan saat memuat data:", error);
+                    showToast("Gagal memuat data awal dari server.", "error");
+                }
             } finally {
-                setIsLoading(false);
+                if (isMounted) {
+                    setIsLoading(false);
+                }
             }
         };
 
         fetchFeatureData();
+
+        return () => {
+            isMounted = false; // Cleanup saat unmount
+        };
     }, []);
 
     // ==========================================
     // HANDLERS API
     // ==========================================
     const handleSave = async () => {
+        // Validasi Frontend Cepat
+        if (!formData.section_title.trim()) {
+            showToast('Judul Bagian Fitur wajib diisi!', 'warning');
+            return;
+        }
+
         setIsSaving(true);
         try {
             const result = await Post('super-admin/feature/update', formData);
 
             if (result) {
-                showToast('Perubahan Bagian Fitur Tersimpan.', 'success');
+                showToast('Perubahan berhasil disimpan & Live di Halaman Depan!', 'success');
             }
         } catch (error: any) {
-            showToast('Gagal menyimpan perubahan. Silakan periksa kembali. ' + error?.message, 'error');
+            // Tangkap pesan spesifik dari Backend atau default
+            const errorMsg = error?.response?.data?.message || error?.message || 'Terjadi kesalahan jaringan. Silakan coba lagi.';
+            showToast(errorMsg, 'error');
         } finally {
             setIsSaving(false);
         }
     };
 
     // Handler Form Dinamis (Type-safe)
-    const handleItemChange = (index: number, field: keyof FeatureItem, value: string) => {
+    const handleItemChange = (index: number, field: keyof Items, value: string) => {
         const newItems = [...formData.items];
         newItems[index] = { ...newItems[index], [field]: value };
         setFormData({ ...formData, items: newItems });
     };
 
     const addItem = () => {
-        const newItem: FeatureItem = {
-            id: Date.now(),
+        const newItem: Items = {
+            id: Date.now(), // Unique ID sementara untuk React Key
             icon: 'solar:star-fall-bold-duotone',
             title: '',
             desc: ''
@@ -174,13 +176,19 @@ export default function FeaturesSectionSettings() {
                     </div>
                 )}
 
-
                 {/* MAIN CONTENT (SPLIT LAYOUT) */}
                 <div className="py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
                     {/* BAGIAN KIRI: FORM EDITOR */}
                     <div className="lg:col-span-6 space-y-6">
-                        <div className="bg-white rounded-[2.5rem] border border-slate-100 p-6 sm:p-8 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="bg-white rounded-[2.5rem] border border-slate-100 p-6 sm:p-8 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
+
+                            {/* Overlay loading saat sedang nyimpan data */}
+                            {isSaving && (
+                                <div className="absolute inset-0 z-50 bg-white/60 backdrop-blur-sm rounded-[2.5rem] flex items-center justify-center">
+                                    <Loader2 size={32} className="animate-spin text-emerald-500" />
+                                </div>
+                            )}
 
                             {/* 1. Pengaturan Header Fitur */}
                             <div className="mb-10">
@@ -190,17 +198,17 @@ export default function FeaturesSectionSettings() {
                                     </h2>
                                     <button
                                         onClick={handleSave}
-                                        disabled={isLoading}
+                                        disabled={isSaving}
                                         className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-full flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
                                     >
-                                        {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                                        {isLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
+                                        {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                                        {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
                                     </button>
                                 </div>
                                 <div className="space-y-6">
                                     <div>
                                         <label className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-500 mb-2 pl-4">
-                                            Judul Bagian Fitur
+                                            Judul Bagian Fitur <span className="text-rose-500">*</span>
                                         </label>
                                         <input
                                             type="text"
@@ -219,6 +227,7 @@ export default function FeaturesSectionSettings() {
                                             value={formData.section_desc}
                                             onChange={(e) => setFormData({ ...formData, section_desc: e.target.value })}
                                             className="w-full px-6 py-4 rounded-3xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-sm font-medium text-slate-700 resize-none leading-relaxed"
+                                            placeholder="Penjelasan singkat tentang fitur unggulan..."
                                         />
                                     </div>
                                 </div>
@@ -303,7 +312,7 @@ export default function FeaturesSectionSettings() {
 
                                                 {/* Judul Fitur */}
                                                 <div>
-                                                    <label className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-500 mb-2 pl-4">Judul Fitur</label>
+                                                    <label className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-500 mb-2 pl-4">Judul Fitur <span className="text-rose-500">*</span></label>
                                                     <input
                                                         type="text"
                                                         value={item.title}
@@ -329,7 +338,6 @@ export default function FeaturesSectionSettings() {
                                     ))}
                                 </div>
                             </div>
-
                         </div>
                     </div>
 

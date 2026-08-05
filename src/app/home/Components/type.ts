@@ -21,7 +21,7 @@ export interface Feature {
 }
 
 export interface Items {
-    id: number;
+    id: number | string;
     icon: string;
     title: string;
     desc: string;
