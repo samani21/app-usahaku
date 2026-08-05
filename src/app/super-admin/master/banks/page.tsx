@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react'
-import { Edit, Trash2Icon } from 'lucide-react'
+import { Edit, RefreshCw, Trash2Icon, XCircle } from 'lucide-react'
 
 import { Meta } from '@/types/Public'
 import { Get } from '@/utils/Get'
@@ -43,6 +43,7 @@ const MasterBanksComponent = () => {
 
     // Gunakan Ref untuk tracking komponen isMounted (SOP)
     const isMounted = useRef(true);
+    const [dataStatus, setDataStatus] = useState<'active' | 'trashed'>('active');
 
     // ==========================================
     // EFFECTS & HELPERS
@@ -96,13 +97,14 @@ const MasterBanksComponent = () => {
         const params = new URLSearchParams();
         params.append("page", page.toString());
         params.append("limit", itemsPerPage.toString());
+        params.append("status", dataStatus); // Kirim status ke backend
 
         if (debouncedSearch.trim()) params.append("search", debouncedSearch);
         if (parsedDate.start_date) params.append("start_date", parsedDate.start_date);
         if (parsedDate.end_date) params.append("end_date", parsedDate.end_date);
 
         return `?${params.toString()}`;
-    }, [parsedDate, page, debouncedSearch, itemsPerPage]);
+    }, [parsedDate, page, debouncedSearch, itemsPerPage, dataStatus]);
 
     // ==========================================
     // API ACTIONS
@@ -147,16 +149,39 @@ const MasterBanksComponent = () => {
     const onDelete = async (id: number | null) => {
         setIsLoading(true)
         try {
-            const res = await Delete(`super-admin/master-banks/${id}`);
+            // Jika mode trashed, maka hapus permanen. Jika active, maka soft delete.
+            const endpoint = dataStatus === 'trashed'
+                ? `super-admin/master-banks/${id}/force-delete`
+                : `super-admin/master-banks/${id}`;
+
+            const res = await Delete(endpoint);
             if (res) {
                 fetchBanks();
                 handleCloseModal();
-                setShowAlert({ type: 'success', message: 'Berhasil hapus data bank', isOpen: true });
+                setShowAlert({
+                    type: 'success',
+                    message: dataStatus === 'trashed' ? 'Data dihapus permanen!' : 'Data dipindah ke sampah',
+                    isOpen: true
+                });
             }
         } catch (err: any) {
             setShowAlert({ type: 'error', message: 'Gagal proses data: ' + err.message, isOpen: true });
         } finally {
             setIsLoading(false)
+        }
+    };
+
+    const handleRestore = async (id: number) => {
+        if (!confirm("Apakah Anda yakin ingin memulihkan data ini?")) return;
+
+        try {
+            const res = await Post(`super-admin/master-banks/${id}/restore`, {});
+            if (res) {
+                fetchBanks();
+                setShowAlert({ type: 'success', message: 'Data berhasil dipulihkan!', isOpen: true });
+            }
+        } catch (err: any) {
+            setShowAlert({ type: 'error', message: 'Gagal memulihkan: ' + err.message, isOpen: true });
         }
     };
 
@@ -193,39 +218,75 @@ const MasterBanksComponent = () => {
     // ==========================================
     const columns: Column<MasterBanksType>[] = useMemo(() => [
         {
-            key: "icon", // Bisa diganti "logo" kalau mau, tapi string "icon" juga aman buat key aja
+            key: "icon",
             label: "Logo Bank",
             width: "200px",
             render: (row) => (
                 <img
                     src={formatImage(row?.logo)}
                     alt={row?.name}
-                    className="w-24 h-12 rounded-md object-contain bg-white border border-slate-100 p-1"
+                    className={`w-24 h-12 rounded-md object-contain bg-white border p-1 ${dataStatus === 'trashed' ? 'opacity-50 grayscale' : 'border-slate-100'}`}
                 />
             )
         },
         { key: "code", label: "Kode Bank" },
-        { key: "name", label: "Nama Bank" },
+        {
+            key: "name",
+            label: "Nama Bank",
+            render: (row) => (
+                <span className={dataStatus === 'trashed' ? 'line-through text-slate-400' : ''}>
+                    {row.name}
+                </span>
+            )
+        },
         {
             key: "actions",
             label: "Aksi",
             align: "center",
             render: (row) => (
                 <div className="flex justify-center gap-2">
-                    <button onClick={() => handleEdit(row)} className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors">
-                        <Edit size={18} />
-                    </button>
-                    <button onClick={() => handleDelete(row)} className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors">
-                        <Trash2Icon size={18} />
-                    </button>
+                    {dataStatus === 'active' ? (
+                        <>
+                            {/* Tombol Active: Edit & Soft Delete */}
+                            <button onClick={() => handleEdit(row)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
+                                <Edit size={18} />
+                            </button>
+                            <button onClick={() => handleDelete(row)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg" title="Pindah ke Sampah">
+                                <Trash2Icon size={18} />
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            {/* Tombol Trashed: Restore & Force Delete */}
+                            <button onClick={() => handleRestore(row.id)} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg" title="Pulihkan Data">
+                                <RefreshCw size={18} />
+                            </button>
+                            <button onClick={() => handleDelete(row)} className="p-2 text-rose-700 hover:bg-rose-100 rounded-lg" title="Hapus Permanen">
+                                <XCircle size={18} />
+                            </button>
+                        </>
+                    )}
                 </div>
             ),
         },
-    ], [handleEdit, handleDelete]);
-
+    ], [handleEdit, handleDelete, dataStatus]); // Pastikan dataStatus masuk dependency!
     return (
         <SuperAdminLayout page='Kelola Akun Bank'>
             <div className='relative space-y-6'>
+                <div className="flex gap-4 border-b border-slate-200 pb-2 mb-4">
+                    <button
+                        onClick={() => { setDataStatus('active'); setPage(1); }}
+                        className={`px-4 py-2 font-bold text-sm border-b-2 transition-all ${dataStatus === 'active' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                    >
+                        Data Aktif
+                    </button>
+                    <button
+                        onClick={() => { setDataStatus('trashed'); setPage(1); }}
+                        className={`px-4 py-2 font-bold text-sm border-b-2 transition-all ${dataStatus === 'trashed' ? 'border-rose-500 text-rose-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                    >
+                        Tempat Sampah
+                    </button>
+                </div>
                 <FilterComponent
                     search={search}
                     setSearch={setSearch}
