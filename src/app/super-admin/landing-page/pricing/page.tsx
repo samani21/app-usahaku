@@ -57,14 +57,16 @@ export default function PricingSectionSettings() {
     };
 
     // ==========================================
-    // FETCH DATA API
+    // FETCH DATA API (SAFE MOUNT PATTERN)
     // ==========================================
     useEffect(() => {
+        let isMounted = true; // SOP: Mencegah error memori saat user pindah halaman cepat
+
         const fetchPricingData = async () => {
             try {
                 const result = await Get<{ success: boolean; data: any }>('super-admin/pricing/show');
 
-                if (result?.success && result.data) {
+                if (isMounted && result?.success && result.data) {
                     setFormData({
                         trial_days: result.data.trial_days || '14',
                         trial_features: result.data.trial_features || [],
@@ -74,14 +76,22 @@ export default function PricingSectionSettings() {
                     });
                 }
             } catch (error) {
-                console.error("Kesalahan jaringan saat memuat data:", error);
-                showToast("Gagal memuat data pengaturan harga dari server.", "error");
+                if (isMounted) {
+                    console.error("Kesalahan jaringan saat memuat data:", error);
+                    showToast("Gagal memuat data pengaturan harga dari server.", "error");
+                }
             } finally {
-                setIsLoading(false);
+                if (isMounted) {
+                    setIsLoading(false);
+                }
             }
         };
 
         fetchPricingData();
+
+        return () => {
+            isMounted = false; // Cleanup jika komponen ditutup
+        };
     }, []);
 
     // ==========================================
@@ -93,10 +103,11 @@ export default function PricingSectionSettings() {
             const result = await Post('super-admin/pricing/update', formData);
 
             if (result) {
-                showToast('Perubahan Paket Harga Berhasil Disimpan!', 'success');
+                showToast('Perubahan Paket Harga Berhasil Disimpan & Live!', 'success');
             }
         } catch (error: any) {
-            showToast('Gagal menyimpan perubahan. ' + (error?.message || ''), 'error');
+            const errorMsg = error?.response?.data?.message || error?.message || 'Terjadi kesalahan jaringan. Silakan coba lagi.';
+            showToast('Gagal menyimpan perubahan. ' + errorMsg, 'error');
         } finally {
             setIsSaving(false);
         }
@@ -118,7 +129,7 @@ export default function PricingSectionSettings() {
     const removeFeature = (type: 'trial' | 'pro', index: number) => {
         const key = type === 'trial' ? 'trial_features' : 'pro_features';
         if (formData[key].length <= 1) {
-            showToast("Minimal harus ada 1 keuntungan yang ditampilkan.", "warning"); // ALERT DIGANTI TOAST
+            showToast("Minimal harus ada 1 keuntungan yang ditampilkan.", "warning");
             return;
         }
         const newFeatures = formData[key].filter((_, i) => i !== index);
@@ -154,6 +165,7 @@ export default function PricingSectionSettings() {
 
     return (
         <SuperAdminLayout>
+            {/* CUSTOM TOAST UI */}
             {toast && (
                 <div className="fixed top-6 right-6 z-50 animate-in fade-in slide-in-from-top-5 duration-300">
                     <div className={`flex items-center gap-3 px-5 py-4 rounded-2xl shadow-xl border ${toast.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
@@ -167,20 +179,29 @@ export default function PricingSectionSettings() {
                     </div>
                 </div>
             )}
+
             <div className=" py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 <div className="lg:col-span-6 space-y-6">
-                    <div className="bg-white rounded-[2.5rem] border border-slate-100 p-6 sm:p-8 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="bg-white rounded-[2.5rem] border border-slate-100 p-6 sm:p-8 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
+
+                        {/* Overlay loading saat nyimpan data */}
+                        {isSaving && (
+                            <div className="absolute inset-0 z-50 bg-white/60 backdrop-blur-sm rounded-[2.5rem] flex items-center justify-center">
+                                <Loader2 size={32} className="animate-spin text-emerald-500" />
+                            </div>
+                        )}
+
                         <div className="flex justify-between items-center mb-8 border-b border-slate-100 pb-4">
                             <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">
                                 Form Pengaturan Harga
                             </h2>
                             <button
                                 onClick={handleSave}
-                                disabled={isLoading}
+                                disabled={isSaving}
                                 className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-full flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
                             >
-                                {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                                {isLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
+                                {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                                {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
                             </button>
                         </div>
 
