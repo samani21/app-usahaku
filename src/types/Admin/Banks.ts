@@ -1,6 +1,7 @@
 export interface MasterBanksType {
     id: number;
     name: string;
+    code: string;
     logo: string;
 }
 

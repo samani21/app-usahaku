@@ -145,6 +145,17 @@ export const SuperAdminMenuSidebar: menuSide[] = [
         href: '/'
     },
     {
+        Icon: Database,
+        label: "Master",
+        href: '/master',
+        child: [
+            {
+                label: 'Banks',
+                href: '/banks'
+            },
+        ]
+    },
+    {
         Icon: Layers,
         label: "Landing Page",
         href: '/landing-page',
