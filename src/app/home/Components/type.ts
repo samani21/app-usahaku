@@ -51,9 +51,8 @@ export interface Footer {
     brand_highlight: string;
     brand_desc: string;
     social_fb: string;
-    social_tw: string;
+    social_th: string;
     social_ig: string;
+    social_yt: string;
     copyright: string;
-    show_fab: boolean;
-    fab_text: string;
 }

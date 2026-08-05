@@ -52,8 +52,9 @@ const FooterSection = ({ footer, handleNavigation, loadingAction, setLoadingActi
                             </p>
                             <div className="flex space-x-5">
                                 {footer?.social_fb && <a href={footer?.social_fb} target="_blank" rel="noreferrer" className="p-2 rounded-full bg-slate-900 hover:bg-[#10B981] hover:text-white transition-all"><Icon icon={'ic:baseline-facebook'} fontSize={18} /></a>}
-                                {footer?.social_tw && <a href={footer?.social_tw} target="_blank" rel="noreferrer" className="p-2 rounded-full bg-slate-900 hover:bg-[#10B981] hover:text-white transition-all"><Icon icon={'ri:threads-fill'} fontSize={18} /></a>}
+                                {footer?.social_th && <a href={footer?.social_th} target="_blank" rel="noreferrer" className="p-2 rounded-full bg-slate-900 hover:bg-[#10B981] hover:text-white transition-all"><Icon icon={'ri:threads-fill'} fontSize={18} /></a>}
                                 {footer?.social_ig && <a href={footer?.social_ig} target="_blank" rel="noreferrer" className="p-2 rounded-full bg-slate-900 hover:bg-[#10B981] hover:text-white transition-all"><Icon icon={'mdi:instagram'} fontSize={18} /></a>}
+                                {footer?.social_yt && <a href={footer?.social_yt} target="_blank" rel="noreferrer" className="p-2 rounded-full bg-slate-900 hover:bg-[#10B981] hover:text-white transition-all"><Icon icon={'mdi:youtube'} fontSize={18} /></a>}
                             </div>
                         </div>
 
@@ -111,20 +112,6 @@ const FooterSection = ({ footer, handleNavigation, loadingAction, setLoadingActi
                     </div>
                 </div>
             </footer>
-
-            {/* FLOATING ACTION BUTTON (DATA DINAMIS) */}
-            {footer?.show_fab !== false && (
-                <a
-                    href="#ecommerce"
-                    className="fixed bottom-6 right-6 z-[60] bg-emerald-500 hover:bg-emerald-600 text-white p-4 rounded-full shadow-2xl shadow-emerald-500/30 transition-transform hover:scale-105 active:scale-95 flex items-center gap-3 border-2 border-white group animate-in zoom-in duration-500"
-                    title={footer?.fab_text || 'E-commerce UMKM'}
-                >
-                    <ShoppingBag size={24} />
-                    <span className="hidden md:block font-black uppercase tracking-widest text-xs pr-2 overflow-hidden whitespace-nowrap max-w-0 group-hover:max-w-xs transition-all duration-300 ease-in-out">
-                        {footer?.fab_text || 'E-commerce UMKM'}
-                    </span>
-                </a>
-            )}
         </div>
     )
 }
