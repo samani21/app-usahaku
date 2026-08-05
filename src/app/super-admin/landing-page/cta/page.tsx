@@ -54,14 +54,16 @@ export default function EcommerceSectionSettings() {
     };
 
     // ==========================================
-    // FETCH DATA API
+    // FETCH DATA API (SAFE MOUNT PATTERN)
     // ==========================================
     useEffect(() => {
+        let isMounted = true; // SOP: Proteksi memori saat pindah menu mendadak
+
         const fetchEcommerceData = async () => {
             try {
                 const result = await Get<{ success: boolean; data: any }>('super-admin/ecommerce-cta/show');
 
-                if (result?.success && result.data) {
+                if (isMounted && result?.success && result.data) {
                     setFormData({
                         headline_1: result.data.headline_1 || '',
                         headline_2: result.data.headline_2 || '',
@@ -71,29 +73,44 @@ export default function EcommerceSectionSettings() {
                     });
                 }
             } catch (error) {
-                console.error("Kesalahan memuat data e-commerce:", error);
-                showToast("Gagal memuat data dari server.", "error");
+                if (isMounted) {
+                    console.error("Kesalahan memuat data e-commerce:", error);
+                    showToast("Gagal memuat data dari server.", "error");
+                }
             } finally {
-                setIsLoading(false);
+                if (isMounted) {
+                    setIsLoading(false);
+                }
             }
         };
 
         fetchEcommerceData();
+
+        return () => {
+            isMounted = false; // Bersihkan state jika komponen ditutup
+        };
     }, []);
 
     // ==========================================
     // HANDLERS API
     // ==========================================
     const handleSave = async () => {
+        // Validasi Cepat Frontend
+        if (!formData.headline_1.trim() || !formData.headline_2.trim()) {
+            showToast('Judul Utama dan Highlight wajib diisi!', 'warning');
+            return;
+        }
+
         setIsSaving(true);
         try {
             const result = await Post('super-admin/ecommerce-cta/update', formData);
 
             if (result) {
-                showToast('Perubahan Bagian E-Commerce Berhasil Disimpan!', 'success');
+                showToast('Perubahan E-Commerce Berhasil Disimpan & Live!', 'success');
             }
         } catch (error: any) {
-            showToast('Gagal menyimpan perubahan. ' + (error?.message || ''), 'error');
+            const errorMsg = error?.response?.data?.message || error?.message || 'Terjadi kesalahan jaringan.';
+            showToast('Gagal menyimpan perubahan. ' + errorMsg, 'error');
         } finally {
             setIsSaving(false);
         }
@@ -134,7 +151,14 @@ export default function EcommerceSectionSettings() {
 
                 {/* BAGIAN KIRI: FORM EDITOR */}
                 <div className="lg:col-span-6 space-y-6">
-                    <div className="bg-white rounded-[2.5rem] border border-slate-100 p-6 sm:p-8 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="bg-white rounded-[2.5rem] border border-slate-100 p-6 sm:p-8 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
+
+                        {/* Overlay loading saat nyimpan data */}
+                        {isSaving && (
+                            <div className="absolute inset-0 z-50 bg-white/60 backdrop-blur-sm rounded-[2.5rem] flex items-center justify-center">
+                                <Loader2 size={32} className="animate-spin text-emerald-500" />
+                            </div>
+                        )}
 
                         <div className="flex justify-between items-center mb-8 border-b border-slate-100 pb-4">
                             <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">
@@ -160,7 +184,7 @@ export default function EcommerceSectionSettings() {
                                 </div>
                                 <div>
                                     <label className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-500 mb-2 pl-4">
-                                        Teks Biasa
+                                        Teks Biasa <span className="text-rose-500">*</span>
                                     </label>
                                     <input
                                         type="text"
@@ -172,7 +196,7 @@ export default function EcommerceSectionSettings() {
                                 </div>
                                 <div>
                                     <label className="block text-[10px] font-extrabold uppercase tracking-widest text-emerald-500 mb-2 pl-4">
-                                        Teks Highlight (Hijau)
+                                        Teks Highlight (Hijau) <span className="text-rose-500">*</span>
                                     </label>
                                     <input
                                         type="text"
@@ -187,7 +211,7 @@ export default function EcommerceSectionSettings() {
                             {/* Input: Description */}
                             <div>
                                 <label className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-widest text-slate-500 mb-2 pl-4">
-                                    <AlignLeft size={12} /> Deskripsi Ajakan (CTA)
+                                    <AlignLeft size={12} /> Deskripsi Ajakan (CTA) <span className="text-rose-500">*</span>
                                 </label>
                                 <textarea
                                     rows={4}
@@ -207,7 +231,7 @@ export default function EcommerceSectionSettings() {
                                 </div>
                                 <div>
                                     <label className="block text-[10px] font-extrabold uppercase tracking-widest text-emerald-600 mb-2 pl-4">
-                                        Tombol Utama (Hijau)
+                                        Tombol Utama (Hijau) <span className="text-rose-500">*</span>
                                     </label>
                                     <input
                                         type="text"
@@ -219,7 +243,7 @@ export default function EcommerceSectionSettings() {
                                 </div>
                                 <div>
                                     <label className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-500 mb-2 pl-4">
-                                        Tombol Sekunder (Gelap)
+                                        Tombol Sekunder (Gelap) <span className="text-rose-500">*</span>
                                     </label>
                                     <input
                                         type="text"
