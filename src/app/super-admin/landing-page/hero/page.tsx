@@ -1,17 +1,21 @@
 "use client"
 import React, { useState, useCallback, useEffect } from 'react';
 import {
-    Sparkles, ArrowRight, Type, AlignLeft, MousePointerClick, Save, Loader2, AlertCircle
+    ArrowRight, Type, AlignLeft, MousePointerClick, Save, Loader2, AlertCircle,
+    CheckCircle,
+    Text,
+    Store
 } from 'lucide-react';
 import SuperAdminLayout from '../../Components/SuperAdminLayout';
 import { Get } from '@/utils/Get';
 import { Post } from '@/utils/Post';
+import { Hero } from '@/app/home/Components/type';
 
 export default function HeroSectionSettings() {
     // ==========================================
     // STATE: HERO SECTION DATA & UI STATE
     // ==========================================
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<Hero>({
         tagline: '',
         headline_1: '',
         headline_2: '',
@@ -25,63 +29,60 @@ export default function HeroSectionSettings() {
     const [successMessage, setSuccessMessage] = useState('');
 
     // ==========================================
-    // HANDLER: OPTIMASI PERFORMA & ANTISIPASI ERROR
+    // DATA FETCHING DENGAN SAFE MOUNT CHECK
     // ==========================================
-
-    // Tarik data dari API saat halaman pertama kali di-load
-    const fetchData = async () => {
-        setLoading(true);
-        setErrorMessage('');
-
-        try {
-            const res = await Get<{
-                success: boolean;
-                data: {
-                    tagline: string;
-                    headline_1: string;
-                    headline_2: string;
-                    description: string;
-                    cta_text: string;
-                }
-            }>('super-admin/hero-setting/show');
-
-            if (res?.success && res?.data) {
-                // Antisipasi Error: Fallback ke string kosong ('') jika ada data yang null dari DB
-                // Agar tidak terjadi warning "A component is changing an uncontrolled input"
-                setFormData({
-                    tagline: res.data.tagline || '',
-                    headline_1: res.data.headline_1 || '',
-                    headline_2: res.data.headline_2 || '',
-                    description: res.data.description || '',
-                    cta_text: res.data.cta_text || '',
-                });
-            }
-        } catch (error) {
-            setErrorMessage('Gagal memuat data awal. Periksa koneksi atau coba muat ulang halaman.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Panggil fetchData hanya 1x saat komponen dipasang (Mount)
     useEffect(() => {
+        // Flag untuk memastikan state hanya diupdate jika komponen masih aktif (belum unmount)
+        let isMounted = true;
+
+        const fetchData = async () => {
+            setLoading(true);
+            setErrorMessage('');
+
+            try {
+                // Hapus penggunaan signal/AbortController karena berisiko bentrok dengan custom Get
+                const res = await Get<{ success: boolean; data: Hero }>('super-admin/hero-setting/show');
+
+                // Pastikan komponen belum di-unmount sebelum meng-update state
+                if (isMounted && res?.success && res?.data) {
+                    setFormData({
+                        tagline: res.data.tagline || '',
+                        headline_1: res.data.headline_1 || '',
+                        headline_2: res.data.headline_2 || '',
+                        description: res.data.description || '',
+                        cta_text: res.data.cta_text || '',
+                    });
+                }
+            } catch (error: any) {
+                // Hanya tampilkan error jika user benar-benar masih berada di halaman ini
+                if (isMounted) {
+                    setErrorMessage('Gagal memuat data awal. Periksa koneksi atau coba muat ulang halaman.');
+                }
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                }
+            }
+        };
+
         fetchData();
+
+        // Cleanup function: Jika user pindah halaman sebelum API selesai, batalkan update state
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     // Gunakan useCallback agar tidak re-render fungsi berkali-kali
-    const handleChange = useCallback((e: any) => {
+    const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
-        setFormData((prev) => ({
-            ...prev,
-            [name]: value
-        }));
+        setFormData((prev) => ({ ...prev, [name]: value }));
 
         if (errorMessage) setErrorMessage('');
         if (successMessage) setSuccessMessage('');
     }, [errorMessage, successMessage]);
 
     const handleSave = async () => {
-        // 1. Edge Case: Validasi Input Wajib (Sesuai validasi Backend: headline_1 wajib ada)
         if (!formData.headline_1.trim()) {
             setErrorMessage('Teks Biasa pada Judul Utama wajib diisi!');
             return;
@@ -92,16 +93,15 @@ export default function HeroSectionSettings() {
         setSuccessMessage('');
 
         try {
-            const res = await Post<any, any>('super-admin/hero-setting/update', formData);
+            const res = await Post<{ success: boolean }, Hero>('super-admin/hero-setting/update', formData);
 
-            // 2. Evaluasi status dari Backend
             if (res?.success) {
-                setSuccessMessage('Perubahan berhasil disimpan!');
+                setSuccessMessage('Perubahan berhasil disimpan dan langsung live di halaman depan!');
             }
         } catch (error: any) {
-            setErrorMessage(error?.message || 'Gagal menyimpan data. Cek kembali inputan Anda.');
-            // 3. Fallback jika API mati/gagal
-            setErrorMessage('Terjadi kesalahan jaringan. Pastikan koneksi stabil atau coba lagi nanti.');
+            // Fallback error dari respon API atau default jaringan
+            const errorMsg = error?.response?.data?.message || error?.message || 'Terjadi kesalahan jaringan. Pastikan koneksi stabil.';
+            setErrorMessage(errorMsg);
         } finally {
             setIsLoading(false);
         }
@@ -124,9 +124,7 @@ export default function HeroSectionSettings() {
                         )}
 
                         <div className="flex justify-between items-center mb-8 border-b border-slate-100 pb-4">
-                            <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">
-                                Editor Konten
-                            </h2>
+                            <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Editor Konten</h2>
                             <button
                                 onClick={handleSave}
                                 disabled={isLoading || loading}
@@ -139,13 +137,13 @@ export default function HeroSectionSettings() {
 
                         {/* Notifikasi Error/Success */}
                         {errorMessage && (
-                            <div className="mb-6 p-4 bg-rose-50 text-rose-600 rounded-2xl flex items-center gap-3 text-sm font-bold animate-in fade-in zoom-in duration-300">
+                            <div className="mb-6 p-4 bg-rose-50 text-rose-600 rounded-2xl flex items-center gap-3 text-sm font-bold">
                                 <AlertCircle size={16} /> {errorMessage}
                             </div>
                         )}
                         {successMessage && (
-                            <div className="mb-6 p-4 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center gap-3 text-sm font-bold animate-in fade-in zoom-in duration-300">
-                                <Sparkles size={16} /> {successMessage}
+                            <div className="mb-6 p-4 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center gap-3 text-sm font-bold">
+                                <CheckCircle size={16} /> {successMessage}
                             </div>
                         )}
 
@@ -153,7 +151,7 @@ export default function HeroSectionSettings() {
                             {/* Input: Tagline */}
                             <div>
                                 <label className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-widest text-slate-500 mb-2 pl-4">
-                                    <Sparkles size={12} className="text-emerald-500" /> Label / Tagline
+                                    <Text size={12} className="text-emerald-500" /> Label / Tagline
                                 </label>
                                 <input
                                     type="text"
@@ -255,7 +253,7 @@ export default function HeroSectionSettings() {
                             <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 w-64 h-64 bg-gradient-to-tr from-[#10B981]/20 to-emerald-200/20 rounded-full blur-[60px] opacity-70 pointer-events-none"></div>
 
                             {loading ? (
-                                /* Skeleton Loading untuk Preview biar UX lebih mantap */
+                                /* Skeleton Loading untuk Preview */
                                 <div className="z-10 flex flex-col items-center w-full animate-pulse">
                                     <div className="h-8 w-32 bg-slate-200 rounded-full mb-6"></div>
                                     <div className="h-12 w-3/4 bg-slate-200 rounded-xl mb-4"></div>
@@ -268,7 +266,7 @@ export default function HeroSectionSettings() {
                                     {/* Fallback & Visual Safeguard */}
                                     {(formData.tagline || 'Tagline Disini') && (
                                         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm mb-6 z-10 transition-all">
-                                            <Sparkles size={12} className="text-[#10B981]" />
+                                            <Store size={12} className="text-[#10B981]" />
                                             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700 break-words">
                                                 {formData.tagline || 'Tagline Disini'}
                                             </span>
