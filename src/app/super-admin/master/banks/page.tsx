@@ -45,12 +45,14 @@ const MasterBanksComponent = () => {
     const isMounted = useRef(true);
     const [dataStatus, setDataStatus] = useState<'active' | 'trashed'>('active');
 
-    // ==========================================
     // EFFECTS & HELPERS
-    // ==========================================
 
     useEffect(() => {
+        // PERBAIKAN: Selalu set ke true setiap kali komponen di-mount/remount
+        isMounted.current = true;
+
         return () => {
+            // Set ke false HANYA saat benar-benar unmount/pindah halaman
             isMounted.current = false;
         };
     }, []);
