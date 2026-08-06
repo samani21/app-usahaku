@@ -165,6 +165,10 @@ export const SuperAdminMenuSidebar: menuSide[] = [
                 label: 'Kommisi',
                 href: '/commision'
             },
+            {
+                label: 'Paket',
+                href: '/packages'
+            },
         ]
     },
     {

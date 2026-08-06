@@ -117,6 +117,9 @@ const CommissionSettingsComponent = () => {
             }
         } catch (err: any) {
             setShowAlert({ type: 'error', message: 'Gagal proses data: ' + (err?.response?.data?.message || err.message), isOpen: true });
+        } finally {
+            setLoading(false)
+            setIsLoading(false)
         }
     };
 

@@ -2,7 +2,6 @@
 
 import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { Edit, Trash2Icon } from 'lucide-react'
-import { Icon } from '@iconify/react' // WAJIB IMPORT ICONIFY
 
 import { Meta } from '@/types/Public'
 import { Get } from '@/utils/Get'
@@ -19,27 +18,24 @@ import Alert from '@/Components/Alert'
 import SuperAdminLayout from '../../Components/SuperAdminLayout'
 import CreateOrUpdate from './Components/CreateOrUpdate'
 
-export interface CategoryType {
+export interface PackageType {
     id: number;
     name: string;
-    icon: string;
-    color: string;
-    is_active: number | boolean;
+    base_price: number;
     created_at: string;
     updated_at: string;
 }
 
-const CategoriesComponent = () => {
+const PackagesComponent = () => {
     // --- FILTER & PAGINATION STATE ---
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [page, setPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [meta, setMeta] = useState<Meta>({ last_page: 1, limit: 10, page: 1, total: 0 });
-    const [dataStatus, setDataStatus] = useState<'active' | 'inactive'>('active');
 
     // --- DATA & UI STATE ---
-    const [categoriesList, setCategoriesList] = useState<CategoryType[]>([]);
+    const [packagesList, setPackagesList] = useState<PackageType[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
@@ -47,8 +43,8 @@ const CategoriesComponent = () => {
 
     // --- MODAL STATE ---
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [dataUpdate, setDataUpdate] = useState<CategoryType | null>(null);
-    const [deleteData, setDeleteData] = useState<CategoryType | null>(null);
+    const [dataUpdate, setDataUpdate] = useState<PackageType | null>(null);
+    const [deleteData, setDeleteData] = useState<PackageType | null>(null);
 
     // SOP: isMounted Protection
     const isMounted = useRef(true);
@@ -77,27 +73,26 @@ const CategoriesComponent = () => {
 
     useEffect(() => {
         setPage(1);
-    }, [debouncedSearch, itemsPerPage, dataStatus]);
+    }, [debouncedSearch, itemsPerPage]);
 
     const queryString = useMemo(() => {
         const params = new URLSearchParams();
         params.append("page", page.toString());
         params.append("limit", itemsPerPage.toString());
-        params.append("status", dataStatus);
         if (debouncedSearch.trim()) params.append("search", debouncedSearch);
         return `?${params.toString()}`;
-    }, [page, debouncedSearch, itemsPerPage, dataStatus]);
+    }, [page, debouncedSearch, itemsPerPage]);
 
     // ==========================================
     // API ACTIONS
     // ==========================================
-    const fetchCategories = useCallback(async () => {
+    const fetchPackages = useCallback(async () => {
         setLoading(true);
         setError('');
         try {
-            const res = await Get<{ success: boolean; data: CategoryType[]; meta: Meta }>(`super-admin/categories${queryString}`);
+            const res = await Get<{ success: boolean; data: PackageType[]; meta: Meta }>(`super-admin/packages${queryString}`);
             if (isMounted.current && res?.success) {
-                setCategoriesList(res.data);
+                setPackagesList(res.data);
                 setMeta(res.meta);
             }
         } catch (err: any) {
@@ -108,17 +103,17 @@ const CategoriesComponent = () => {
     }, [queryString]);
 
     useEffect(() => {
-        fetchCategories();
-    }, [fetchCategories]);
+        fetchPackages();
+    }, [fetchPackages]);
 
     const handleFormSubmit = async (formData: FormData, id: number | null) => {
         try {
-            const endpoint = id ? `super-admin/categories/${id}` : 'super-admin/categories';
+            const endpoint = id ? `super-admin/packages/${id}` : 'super-admin/packages';
             const res = await Post(endpoint, formData);
             if (res) {
-                fetchCategories();
+                fetchPackages();
                 handleCloseModal();
-                setShowAlert({ type: 'success', message: id ? 'Berhasil update kategori' : 'Berhasil simpan kategori', isOpen: true });
+                setShowAlert({ type: 'success', message: id ? 'Berhasil update paket' : 'Berhasil simpan paket', isOpen: true });
             }
         } catch (err: any) {
             setShowAlert({ type: 'error', message: 'Gagal proses data: ' + (err?.response?.data?.message || err.message), isOpen: true });
@@ -131,11 +126,11 @@ const CategoriesComponent = () => {
     const onDelete = async (id: number | null) => {
         setIsLoading(true)
         try {
-            const res = await Delete(`super-admin/categories/${id}`);
+            const res = await Delete(`super-admin/packages/${id}`);
             if (res) {
-                fetchCategories();
+                fetchPackages();
                 handleCloseModal();
-                setShowAlert({ type: 'success', message: 'Kategori berhasil dihapus!', isOpen: true });
+                setShowAlert({ type: 'success', message: 'Paket berhasil dihapus!', isOpen: true });
             }
         } catch (err: any) {
             setShowAlert({ type: 'error', message: 'Gagal proses data: ' + err.message, isOpen: true });
@@ -157,40 +152,31 @@ const CategoriesComponent = () => {
         }, 300);
     };
 
-    const handleEdit = useCallback((row: CategoryType) => {
+    const handleEdit = useCallback((row: PackageType) => {
         setDataUpdate(row);
         setIsModalOpen(true);
     }, []);
 
-    const handleDelete = useCallback((row: CategoryType) => {
+    const handleDelete = useCallback((row: PackageType) => {
         setDeleteData(row);
         setIsModalOpen(true);
     }, []);
 
+    const formatIDR = (val: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
+
     // ==========================================
     // TABLE COLUMNS
     // ==========================================
-    const columns: Column<CategoryType>[] = useMemo(() => [
-        {
-            key: "icon",
-            label: "Ikon",
-            width: "80px",
-            align: "center",
-            render: (row) => (
-                <div className={`w-10 h-10 mx-auto rounded-xl flex items-center justify-center ${row.color}`}>
-                    <Icon icon={row.icon} className="text-2xl" />
-                </div>
-            )
-        },
+    const columns: Column<PackageType>[] = useMemo(() => [
         {
             key: "name",
-            label: "Nama Kategori",
+            label: "Nama Paket",
             render: (row) => <span className="font-bold text-slate-800">{row.name}</span>
         },
         {
-            key: "color",
-            label: "Kode Warna",
-            render: (row) => <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded">{row.color}</span>
+            key: "base_price",
+            label: "Harga Dasar (Rp)",
+            render: (row) => <span className="font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">{formatIDR(row.base_price)}</span>
         },
         {
             key: "actions",
@@ -210,28 +196,13 @@ const CategoriesComponent = () => {
     ], [handleEdit, handleDelete]);
 
     return (
-        <SuperAdminLayout page='Kelola Kategori'>
+        <SuperAdminLayout page='Kelola Paket Layanan'>
             <div className='relative space-y-6'>
-                {/* TAB STATUS AKTIF/NON-AKTIF */}
-                <div className="flex gap-4 border-b border-slate-200 pb-2 mb-4">
-                    <button
-                        onClick={() => { setDataStatus('active'); setPage(1); }}
-                        className={`px-4 py-2 font-bold text-sm border-b-2 transition-all ${dataStatus === 'active' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
-                    >
-                        Aktif
-                    </button>
-                    <button
-                        onClick={() => { setDataStatus('inactive'); setPage(1); }}
-                        className={`px-4 py-2 font-bold text-sm border-b-2 transition-all ${dataStatus === 'inactive' ? 'border-rose-500 text-rose-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
-                    >
-                        Non-Aktif
-                    </button>
-                </div>
 
                 <FilterComponent
                     search={search}
                     setSearch={setSearch}
-                    dateRangeText="" setDateRangeText={() => { }} // Abaikan jika tidak butuh daterange
+                    dateRangeText="" setDateRangeText={() => { }}
                     itemsPerPage={itemsPerPage}
                     setItemsPerPage={setItemsPerPage}
                     setPage={setPage}
@@ -240,8 +211,8 @@ const CategoriesComponent = () => {
                 />
 
                 <div className="mt-6">
-                    <DataTable<CategoryType>
-                        data={categoriesList}
+                    <DataTable<PackageType>
+                        data={packagesList}
                         columns={columns}
                         page={page}
                         itemsPerPage={itemsPerPage}
@@ -265,7 +236,7 @@ const CategoriesComponent = () => {
                 ) : (
                     <ModalCrud
                         isOpen={isModalOpen}
-                        title={dataUpdate ? "Edit Kategori" : "Tambah Kategori"}
+                        title={dataUpdate ? "Edit Paket Layanan" : "Tambah Paket Layanan"}
                         onClose={handleCloseModal}
                     >
                         <CreateOrUpdate
@@ -291,4 +262,4 @@ const CategoriesComponent = () => {
     )
 }
 
-export default CategoriesComponent
+export default PackagesComponent
