@@ -150,8 +150,12 @@ export const SuperAdminMenuSidebar: menuSide[] = [
         href: '/master',
         child: [
             {
-                label: 'Banks',
+                label: 'Bank',
                 href: '/banks'
+            },
+            {
+                label: 'banner',
+                href: '/banners'
             },
         ]
     },
