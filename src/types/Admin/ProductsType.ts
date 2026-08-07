@@ -48,6 +48,7 @@ export interface Errors {
 export const initialProductState: ProductForm = {
     name: '',
     price: '',
+    cost: '',
     image: null,
     imagePreviewUrl: null,
     has_variant: 0,
