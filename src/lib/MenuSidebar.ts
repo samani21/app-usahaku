@@ -204,6 +204,10 @@ export const SuperAdminMenuSidebar: menuSide[] = [
         href: '/users',
         child: [
             {
+                label: 'Pengguna',
+                href: '/users'
+            },
+            {
                 label: 'Client',
                 href: '/client'
             },

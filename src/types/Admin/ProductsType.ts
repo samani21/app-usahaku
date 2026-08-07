@@ -3,6 +3,7 @@ import { ChangeEvent } from "react";
 export interface Variant {
     name: string;
     price: string | number; // String untuk input yang kosong/diketik, Number untuk konversi akhir
+    cost: string | number;
     stock?: string | number; // String untuk input yang kosong/diketik, Number untuk konversi akhir
     image: File | null;
     imagePreviewUrl: string | null;
@@ -16,6 +17,7 @@ export interface ProductForm {
     name: string;
     description?: string;
     price: string | number;
+    cost: string | number;
     stock?: string | number;
     image: File | null;
     imagePreviewUrl: string | null;
@@ -68,6 +70,7 @@ export interface Variants {
     product_id: number,
     stock?: number,
     price: number,
+    cost: number,
     discount_price?: number,
     percent_discount?: number,
     final_price: number,
@@ -107,6 +110,7 @@ export interface ProductsType {
     is_active: boolean,
     is_stock: boolean,
     price: number,
+    cost: number,
     stock?: number,
     distance?: number,
     variants: Variants[]
