@@ -1,4 +1,4 @@
-import { Database, Gift, Globe, HandCoins, Layers, LayoutDashboard, Radio, ScrollText, Store, UserCircle } from "lucide-react";
+import { Database, Gift, Globe, HandCoins, Landmark, Layers, LayoutDashboard, Radio, ScrollText, Store, UserCircle } from "lucide-react";
 import { ReactElement } from "react";
 
 interface child {
@@ -118,6 +118,17 @@ export const menuSidebar: menuSide[] = [
             //     label: 'Riwayat Keuangan',
             //     href: '/history'
             // },
+        ]
+    },
+    {
+        Icon: Landmark,
+        label: "Keuangan",
+        href: '/accounting',
+        child: [
+            {
+                label: 'Pengeluaran',
+                href: '/expenses'
+            },
         ]
     },
     {
