@@ -109,6 +109,7 @@ const ServiceFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
             const mappedVariants: Variant[] = dataUpdate.variants?.map((v: any) => ({
                 name: v?.name || "",
                 price: v?.price ?? "",
+                cost: v?.cost ?? "",
                 id: v?.id ?? 0,
                 image: null,
                 imagePreviewUrl: v?.image || null,
@@ -120,6 +121,7 @@ const ServiceFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
                 name: dataUpdate.name,
                 description: dataUpdate.description,
                 price: dataUpdate.price,
+                cost: dataUpdate.cost,
                 category: dataUpdate.product_category_id ?? null,
                 image: null,
                 imagePreviewUrl: dataUpdate.image,
@@ -226,7 +228,7 @@ const ServiceFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
         setProductData(prev => ({
             ...prev,
             has_variant: newValue,
-            variants: newValue === 1 ? [{ name: '', price: '', image: null, imagePreviewUrl: null, is_package: false }] : []
+            variants: newValue === 1 ? [{ name: '', price: '', cost: '', image: null, imagePreviewUrl: null, is_package: false }] : []
         }));
         setError(prev => ({ ...prev, is_shared_stock: undefined }));
     };
@@ -266,7 +268,7 @@ const ServiceFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
     const addVariant = () => {
         setProductData(prev => ({
             ...prev,
-            variants: [...prev.variants, { name: '', price: '', stock: '', image: null, imagePreviewUrl: null, is_package: false }],
+            variants: [...prev.variants, { name: '', price: '', cost: '', stock: '', image: null, imagePreviewUrl: null, is_package: false }],
         }));
     };
 
