@@ -40,19 +40,18 @@ const MasterBanksComponent = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [dataUpdate, setDataUpdate] = useState<MasterBanksType | null>(null);
     const [deleteData, setDeleteData] = useState<MasterBanksType | null>(null);
+    const [restoreData, setRestoreData] = useState<MasterBanksType | null>(null); // State baru untuk Restore
 
     // Gunakan Ref untuk tracking komponen isMounted (SOP)
     const isMounted = useRef(true);
     const [dataStatus, setDataStatus] = useState<'active' | 'trashed'>('active');
 
+    // ==========================================
     // EFFECTS & HELPERS
-
+    // ==========================================
     useEffect(() => {
-        // PERBAIKAN: Selalu set ke true setiap kali komponen di-mount/remount
         isMounted.current = true;
-
         return () => {
-            // Set ke false HANYA saat benar-benar unmount/pindah halaman
             isMounted.current = false;
         };
     }, []);
@@ -73,7 +72,7 @@ const MasterBanksComponent = () => {
 
     useEffect(() => {
         setPage(1);
-    }, [debouncedSearch, dateRangeText, itemsPerPage]);
+    }, [debouncedSearch, dateRangeText, itemsPerPage, dataStatus]);
 
     const parsedDate = useMemo(() => {
         if (!dateRangeText.includes(" - ")) return { start_date: "", end_date: "" };
@@ -99,7 +98,7 @@ const MasterBanksComponent = () => {
         const params = new URLSearchParams();
         params.append("page", page.toString());
         params.append("limit", itemsPerPage.toString());
-        params.append("status", dataStatus); // Kirim status ke backend
+        params.append("status", dataStatus);
 
         if (debouncedSearch.trim()) params.append("search", debouncedSearch);
         if (parsedDate.start_date) params.append("start_date", parsedDate.start_date);
@@ -132,10 +131,9 @@ const MasterBanksComponent = () => {
     }, [fetchBanks]);
 
     const handleFormSubmit = async (formData: FormData, id: number | null) => {
+        setIsLoading(true);
         try {
-            // FIX KODE SEBELUMNYA: client/banks diganti jadi endpoint master-banks yang benar
             const endpoint = id ? `super-admin/master-banks/${id}` : 'super-admin/master-banks';
-
             const res = await Post(endpoint, formData);
 
             if (res) {
@@ -146,15 +144,16 @@ const MasterBanksComponent = () => {
         } catch (err: any) {
             setShowAlert({ type: 'error', message: 'Gagal proses data: ' + (err?.response?.data?.message || err.message), isOpen: true });
         } finally {
-            setLoading(false)
-            setIsLoading(false)
+            if (isMounted.current) {
+                setLoading(false);
+                setIsLoading(false);
+            }
         }
     };
 
     const onDelete = async (id: number | null) => {
-        setIsLoading(true)
+        setIsLoading(true);
         try {
-            // Jika mode trashed, maka hapus permanen. Jika active, maka soft delete.
             const endpoint = dataStatus === 'trashed'
                 ? `super-admin/master-banks/${id}/force-delete`
                 : `super-admin/master-banks/${id}`;
@@ -172,21 +171,25 @@ const MasterBanksComponent = () => {
         } catch (err: any) {
             setShowAlert({ type: 'error', message: 'Gagal proses data: ' + err.message, isOpen: true });
         } finally {
-            setIsLoading(false)
+            if (isMounted.current) setIsLoading(false);
         }
     };
 
-    const handleRestore = async (id: number) => {
-        if (!confirm("Apakah Anda yakin ingin memulihkan data ini?")) return;
+    const handleRestore = async () => {
+        if (!restoreData) return;
+        setIsLoading(true);
 
         try {
-            const res = await Post(`super-admin/master-banks/${id}/restore`, {});
+            const res = await Post(`super-admin/master-banks/${restoreData.id}/restore`, {});
             if (res) {
                 fetchBanks();
+                setRestoreData(null);
                 setShowAlert({ type: 'success', message: 'Data berhasil dipulihkan!', isOpen: true });
             }
         } catch (err: any) {
             setShowAlert({ type: 'error', message: 'Gagal memulihkan: ' + err.message, isOpen: true });
+        } finally {
+            if (isMounted.current) setIsLoading(false);
         }
     };
 
@@ -204,6 +207,7 @@ const MasterBanksComponent = () => {
             if (isMounted.current) {
                 setDataUpdate(null);
                 setDeleteData(null);
+                setRestoreData(null); // Tutup juga form restore
             }
         }, 300);
     };
@@ -252,7 +256,6 @@ const MasterBanksComponent = () => {
                 <div className="flex justify-center gap-2">
                     {dataStatus === 'active' ? (
                         <>
-                            {/* Tombol Active: Edit & Soft Delete */}
                             <button onClick={() => handleEdit(row)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
                                 <Edit size={18} />
                             </button>
@@ -262,8 +265,8 @@ const MasterBanksComponent = () => {
                         </>
                     ) : (
                         <>
-                            {/* Tombol Trashed: Restore & Force Delete */}
-                            <button onClick={() => handleRestore(row.id)} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg" title="Pulihkan Data">
+                            {/* TOMBOL RESTORE (Memanggil State Modal) */}
+                            <button onClick={() => setRestoreData(row)} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg" title="Pulihkan Data">
                                 <RefreshCw size={18} />
                             </button>
                             <button onClick={() => handleDelete(row)} className="p-2 text-rose-700 hover:bg-rose-100 rounded-lg" title="Hapus Permanen">
@@ -274,7 +277,8 @@ const MasterBanksComponent = () => {
                 </div>
             ),
         },
-    ], [handleEdit, handleDelete, dataStatus]); // Pastikan dataStatus masuk dependency!
+    ], [handleEdit, handleDelete, dataStatus]);
+
     return (
         <SuperAdminLayout page='Kelola Akun Pembayaran'>
             <div className='relative space-y-6'>
@@ -318,7 +322,7 @@ const MasterBanksComponent = () => {
                     />
                 </div>
 
-                {/* MODALS */}
+                {/* MODALS CRUD & DELETE */}
                 {deleteData ? (
                     <ModalDelete
                         isOpen={isModalOpen}
@@ -341,6 +345,37 @@ const MasterBanksComponent = () => {
                             loading={loading}
                         />
                     </ModalCrud>
+                )}
+
+                {/* MODAL KHUSUS RESTORE */}
+                {restoreData && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                        <div className="bg-white rounded-2xl p-6 w-full max-w-sm text-center shadow-xl animate-in zoom-in-95 duration-200">
+                            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <RefreshCw size={32} />
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-800 mb-2">Pulihkan Data?</h3>
+                            <p className="text-sm text-slate-500 mb-6">
+                                Apakah Anda yakin ingin mengembalikan data bank <strong>{restoreData.name}</strong> ke daftar aktif?
+                            </p>
+                            <div className="flex gap-3 justify-center">
+                                <button
+                                    onClick={() => setRestoreData(null)}
+                                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-all"
+                                    disabled={isLoading}
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    onClick={handleRestore}
+                                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 min-w-[120px]"
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? 'Memproses...' : 'Ya, Pulihkan'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 )}
 
                 {/* ALERT */}

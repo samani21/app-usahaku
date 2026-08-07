@@ -53,6 +53,7 @@ const BannersComponent = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [dataUpdate, setDataUpdate] = useState<BannerType | null>(null);
     const [deleteData, setDeleteData] = useState<BannerType | null>(null);
+    const [restoreData, setRestoreData] = useState<BannerType | null>(null); // State baru untuk Restore
 
     // --- STATUS STATE (Soft Deletes) ---
     const [dataStatus, setDataStatus] = useState<'active' | 'trashed'>('active');
@@ -143,6 +144,7 @@ const BannersComponent = () => {
     }, [fetchBanners]);
 
     const handleFormSubmit = async (formData: FormData, id: number | null) => {
+        setIsLoading(true);
         try {
             const endpoint = id ? `super-admin/banners/${id}` : 'super-admin/banners';
             const res = await Post(endpoint, formData);
@@ -155,8 +157,10 @@ const BannersComponent = () => {
         } catch (err: any) {
             setShowAlert({ type: 'error', message: 'Gagal proses data: ' + (err?.response?.data?.message || err.message), isOpen: true });
         } finally {
-            setLoading(false)
-            setIsLoading(false)
+            if (isMounted.current) {
+                setLoading(false);
+                setIsLoading(false);
+            }
         }
     };
 
@@ -180,20 +184,25 @@ const BannersComponent = () => {
         } catch (err: any) {
             setShowAlert({ type: 'error', message: 'Gagal proses data: ' + err.message, isOpen: true });
         } finally {
-            setIsLoading(false)
+            if (isMounted.current) setIsLoading(false);
         }
     };
 
-    const handleRestore = async (id: number) => {
-        if (!confirm("Apakah Anda yakin ingin memulihkan data ini?")) return;
+    const handleRestore = async () => {
+        if (!restoreData) return;
+        setIsLoading(true);
+
         try {
-            const res = await Post(`super-admin/banners/${id}/restore`, {});
+            const res = await Post(`super-admin/banners/${restoreData.id}/restore`, {});
             if (res) {
                 fetchBanners();
+                setRestoreData(null);
                 setShowAlert({ type: 'success', message: 'Banner berhasil dipulihkan!', isOpen: true });
             }
         } catch (err: any) {
             setShowAlert({ type: 'error', message: 'Gagal memulihkan: ' + err.message, isOpen: true });
+        } finally {
+            if (isMounted.current) setIsLoading(false);
         }
     };
 
@@ -211,6 +220,7 @@ const BannersComponent = () => {
             if (isMounted.current) {
                 setDataUpdate(null);
                 setDeleteData(null);
+                setRestoreData(null);
             }
         }, 300);
     };
@@ -269,7 +279,7 @@ const BannersComponent = () => {
                         </>
                     ) : (
                         <>
-                            <button onClick={() => handleRestore(row.id)} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg" title="Pulihkan Data">
+                            <button onClick={() => setRestoreData(row)} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg" title="Pulihkan Data">
                                 <RefreshCw size={18} />
                             </button>
                             <button onClick={() => handleDelete(row)} className="p-2 text-rose-700 hover:bg-rose-100 rounded-lg" title="Hapus Permanen">
@@ -327,7 +337,7 @@ const BannersComponent = () => {
                     />
                 </div>
 
-                {/* MODALS */}
+                {/* MODALS CRUD & DELETE */}
                 {deleteData ? (
                     <ModalDelete
                         isOpen={isModalOpen}
@@ -350,6 +360,37 @@ const BannersComponent = () => {
                             loading={loading}
                         />
                     </ModalCrud>
+                )}
+
+                {/* MODAL KHUSUS RESTORE */}
+                {restoreData && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                        <div className="bg-white rounded-2xl p-6 w-full max-w-sm text-center shadow-xl animate-in zoom-in-95 duration-200">
+                            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <RefreshCw size={32} />
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-800 mb-2">Pulihkan Data?</h3>
+                            <p className="text-sm text-slate-500 mb-6">
+                                Apakah Anda yakin ingin mengembalikan banner <strong>{restoreData.title}</strong> ke daftar aktif?
+                            </p>
+                            <div className="flex gap-3 justify-center">
+                                <button
+                                    onClick={() => setRestoreData(null)}
+                                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-all"
+                                    disabled={isLoading}
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    onClick={handleRestore}
+                                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 min-w-[120px]"
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? 'Memproses...' : 'Ya, Pulihkan'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 )}
 
                 {/* ALERT */}

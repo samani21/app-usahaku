@@ -26,12 +26,13 @@ export interface UserType {
     whatsapp: string;
     role: string;
     is_active: number;
-    status: string;
+    status: string; // Kolom status blokir
     created_at: string;
     updated_at: string;
 }
 
 const UsersComponent = () => {
+    // --- FILTER & PAGINATION STATE ---
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [page, setPage] = useState(1);
@@ -39,18 +40,24 @@ const UsersComponent = () => {
     const [meta, setMeta] = useState<Meta>({ last_page: 1, limit: 10, page: 1, total: 0 });
     const [dataStatus, setDataStatus] = useState<'active' | 'trashed'>('active');
 
+    // --- DATA & UI STATE ---
     const [usersList, setUsersList] = useState<UserType[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
     const [showAlert, setShowAlert] = useState<AlertType | null>(null);
 
+    // --- MODAL STATE ---
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalType, setModalType] = useState<'edit' | 'password' | 'delete'>('edit');
     const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
+    const [restoreData, setRestoreData] = useState<UserType | null>(null); // State khusus modal Restore
 
     const isMounted = useRef(true);
 
+    // ==========================================
+    // EFFECTS & HELPERS
+    // ==========================================
     useEffect(() => {
         isMounted.current = true;
         return () => { isMounted.current = false; };
@@ -83,6 +90,9 @@ const UsersComponent = () => {
         return `?${params.toString()}`;
     }, [page, debouncedSearch, itemsPerPage, dataStatus]);
 
+    // ==========================================
+    // API ACTIONS
+    // ==========================================
     const fetchUsers = useCallback(async () => {
         setLoading(true);
         setError('');
@@ -99,7 +109,11 @@ const UsersComponent = () => {
         }
     }, [queryString]);
 
-    // --- HANDLER UPDATE USER ---
+    useEffect(() => {
+        fetchUsers();
+    }, [fetchUsers]);
+
+    // Handler Update User
     const handleUpdateUser = async (formData: FormData, id: number) => {
         setIsLoading(true);
         try {
@@ -116,7 +130,7 @@ const UsersComponent = () => {
         }
     };
 
-    // --- HANDLER RESET PASSWORD ---
+    // Handler Reset Password
     const handleResetPassword = async (formData: FormData, id: number) => {
         setIsLoading(true);
         try {
@@ -131,9 +145,6 @@ const UsersComponent = () => {
             if (isMounted.current) setIsLoading(false);
         }
     };
-    useEffect(() => {
-        fetchUsers();
-    }, [fetchUsers]);
 
     // Handle Delete / Force Delete
     const onDelete = async (id: number | null) => {
@@ -156,30 +167,45 @@ const UsersComponent = () => {
         } catch (err: any) {
             setShowAlert({ type: 'error', message: 'Gagal proses data: ' + err.message, isOpen: true });
         } finally {
-            setIsLoading(false);
+            if (isMounted.current) setIsLoading(false);
         }
     };
 
-    const handleRestore = async (id: number) => {
-        if (!confirm("Pulihkan akun user ini?")) return;
+    // Handle Restore User
+    const handleRestore = async () => {
+        if (!restoreData) return;
+        setIsLoading(true);
+
         try {
-            const res = await Post(`super-admin/users/${id}/restore`, {});
+            const res = await Post(`super-admin/users/${restoreData.id}/restore`, {});
             if (res) {
                 fetchUsers();
+                setRestoreData(null);
                 setShowAlert({ type: 'success', message: 'User berhasil dipulihkan!', isOpen: true });
             }
         } catch (err: any) {
             setShowAlert({ type: 'error', message: 'Gagal memulihkan: ' + err.message, isOpen: true });
+        } finally {
+            if (isMounted.current) setIsLoading(false);
         }
     };
 
+    // ==========================================
+    // UI HANDLERS
+    // ==========================================
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setTimeout(() => {
-            if (isMounted.current) setSelectedUser(null);
+            if (isMounted.current) {
+                setSelectedUser(null);
+                setRestoreData(null);
+            }
         }, 300);
     };
 
+    // ==========================================
+    // TABLE COLUMNS CONFIG
+    // ==========================================
     const columns: Column<UserType>[] = useMemo(() => [
         {
             key: "name",
@@ -212,7 +238,7 @@ const UsersComponent = () => {
                         {row.status === 'active' ? 'AKTIF' : 'SUSPENDED'}
                     </span>
 
-                    {/* Indikator Verifikasi (Hanya tampilan tambahan) */}
+                    {/* Indikator Verifikasi Email/OTP */}
                     {row.is_active === 1 ? (
                         <span className="text-[9px] font-bold text-blue-500">Verified</span>
                     ) : (
@@ -235,13 +261,13 @@ const UsersComponent = () => {
                             <button onClick={() => { setSelectedUser(row); setModalType('password'); setIsModalOpen(true); }} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg" title="Reset Password">
                                 <KeyRound size={16} />
                             </button>
-                            <button onClick={() => { setSelectedUser(row); setModalType('delete'); setIsModalOpen(true); }} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg" title="Nonaktifkan / Hapus">
+                            <button onClick={() => { setSelectedUser(row); setModalType('delete'); setIsModalOpen(true); }} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg" title="Pindah ke Sampah">
                                 <Trash2Icon size={16} />
                             </button>
                         </>
                     ) : (
                         <>
-                            <button onClick={() => handleRestore(row.id)} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg" title="Pulihkan">
+                            <button onClick={() => setRestoreData(row)} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg" title="Pulihkan">
                                 <RefreshCw size={16} />
                             </button>
                             <button onClick={() => { setSelectedUser(row); setModalType('delete'); setIsModalOpen(true); }} className="p-2 text-rose-700 hover:bg-rose-100 rounded-lg" title="Hapus Permanen">
@@ -280,7 +306,7 @@ const UsersComponent = () => {
                     setItemsPerPage={setItemsPerPage}
                     setPage={setPage}
                     handleReset={() => setSearch("")}
-                    setIsModalOpenForm={() => { }} // Tidak ada tombol tambah user baru lewat admin crud ini
+                    setIsModalOpenForm={() => { }}
                     hiddenAdd={true}
                 />
 
@@ -298,7 +324,7 @@ const UsersComponent = () => {
                     />
                 </div>
 
-                {/* MODALS */}
+                {/* MODALS EDIT / DELETE */}
                 {isModalOpen && selectedUser && (
                     modalType === 'delete' ? (
                         <ModalDelete
@@ -335,6 +361,38 @@ const UsersComponent = () => {
                     )
                 )}
 
+                {/* MODAL KHUSUS RESTORE */}
+                {restoreData && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                        <div className="bg-white rounded-2xl p-6 w-full max-w-sm text-center shadow-xl animate-in zoom-in-95 duration-200">
+                            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <RefreshCw size={32} />
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-800 mb-2">Pulihkan User?</h3>
+                            <p className="text-sm text-slate-500 mb-6">
+                                Apakah Anda yakin ingin memulihkan akun <strong>{restoreData.name}</strong> ke daftar aktif?
+                            </p>
+                            <div className="flex gap-3 justify-center">
+                                <button
+                                    onClick={() => setRestoreData(null)}
+                                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-all"
+                                    disabled={isLoading}
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    onClick={handleRestore}
+                                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 min-w-[120px]"
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? 'Memproses...' : 'Ya, Pulihkan'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ALERT */}
                 {showAlert?.isOpen && (
                     <Alert
                         type={showAlert.type}
