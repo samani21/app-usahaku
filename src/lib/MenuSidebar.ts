@@ -1,4 +1,4 @@
-import { Database, Gift, Globe, Layers, LayoutDashboard, Radio, ScrollText, Store } from "lucide-react";
+import { Database, Gift, Globe, HandCoins, Layers, LayoutDashboard, Radio, ScrollText, Store, UserCircle } from "lucide-react";
 import { ReactElement } from "react";
 
 interface child {
@@ -150,7 +150,7 @@ export const SuperAdminMenuSidebar: menuSide[] = [
         href: '/master',
         child: [
             {
-                label: 'Bank',
+                label: 'Pembayaran',
                 href: '/banks'
             },
             {
@@ -195,6 +195,36 @@ export const SuperAdminMenuSidebar: menuSide[] = [
             {
                 label: 'Footer',
                 href: '/footer'
+            },
+        ]
+    },
+    {
+        Icon: UserCircle,
+        label: "Pengguna",
+        href: '/users',
+        child: [
+            {
+                label: 'Client',
+                href: '/client'
+            },
+            {
+                label: 'Customer',
+                href: '/customer'
+            },
+        ]
+    },
+    {
+        Icon: HandCoins,
+        label: "Afiliasi",
+        href: '/Affiliate',
+        child: [
+            {
+                label: 'Kommisi',
+                href: '/commision'
+            },
+            {
+                label: 'Penarikan',
+                href: '/withdraw'
             },
         ]
     },

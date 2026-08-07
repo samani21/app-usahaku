@@ -276,7 +276,7 @@ const MasterBanksComponent = () => {
         },
     ], [handleEdit, handleDelete, dataStatus]); // Pastikan dataStatus masuk dependency!
     return (
-        <SuperAdminLayout page='Kelola Akun Bank'>
+        <SuperAdminLayout page='Kelola Akun Pembayaran'>
             <div className='relative space-y-6'>
                 <div className="flex gap-4 border-b border-slate-200 pb-2 mb-4">
                     <button
