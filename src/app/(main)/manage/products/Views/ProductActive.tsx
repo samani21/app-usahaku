@@ -244,6 +244,17 @@ export default function ProductActive() {
             render: (row) => <span className="font-bold text-slate-700">Rp {row.price.toLocaleString("id-ID")}</span>,
         },
         {
+            key: "cost",
+            label: "Harga Modal",
+            align: "right",
+            width: "150",
+            render: (row) => (
+                <span className="font-semibold text-slate-500">
+                    Rp {(row.cost ?? 0).toLocaleString("id-ID")}
+                </span>
+            ),
+        },
+        {
             key: "qrcode",
             label: "QR Code",
             align: "center",
