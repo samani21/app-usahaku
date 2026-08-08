@@ -27,7 +27,7 @@ type Props = {
 
 interface OptionsType {
     label: string;
-    value: number;
+    value: number | string; // [UPDATE] Ubah agar bisa menerima string kosong ('')
 }
 
 interface FormErrors {
@@ -89,7 +89,8 @@ const ServiceFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
                     label: item.name,
                     value: item.id,
                 }));
-                setCategories(formatted);
+                // [UPDATE] Tambahkan opsi "Tanpa Kategori" di paling atas
+                setCategories([{ label: "-- Tidak Menggunakan Kategori --", value: "" }, ...formatted]);
             }
         } catch (e) {
             // console.error("Gagal mengambil kategori", e);
@@ -205,11 +206,14 @@ const ServiceFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
     // ==========================================
     const handleProductChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
-        let newValue: string | number | boolean = value;
+        let newValue: any = value; // [UPDATE] Ubah jadi 'any' agar support null
 
         // Custom formatting untuk price agar hanya menyimpan angka murni
         if (name === 'price') {
             newValue = value.replace(/[^0-9]/g, "");
+        } else if (name === 'category') {
+            // [UPDATE] Jika value string kosong, jadikan null
+            newValue = value === '' ? null : Number(value);
         } else if (type === 'number') {
             newValue = value === '' ? '' : Number(value);
         } else if (type === 'checkbox') {
@@ -321,7 +325,14 @@ const ServiceFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
         const formData = new FormData();
         formData.append('name', productData.name);
         formData.append('description', productData.description ?? '');
-        if (productData.category) formData.append('product_category_id', String(productData.category));
+
+        // [UPDATE] Jika tidak ada kategori (null), kirim string kosong untuk menghapus relasi di backend
+        if (productData.category) {
+            formData.append('product_category_id', String(productData.category));
+        } else {
+            formData.append('product_category_id', '');
+        }
+
         formData.append('price', (productData.price === '' ? 0 : productData.price).toString());
         formData.append('has_variant', productData.has_variant.toString());
         formData.append('is_qty', productData.is_qty ? "1" : "0");
@@ -434,9 +445,11 @@ const ServiceFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
                                 error={error?.price}
                                 required
                             />
+
+                            {/* [UPDATE] Label disesuaikan jadi (Opsional) */}
                             <FormInput
                                 type="autocomplete"
-                                label="Kategori"
+                                label="Kategori (Opsional)"
                                 name="category"
                                 value={productData.category ?? null}
                                 onChange={handleProductChange}

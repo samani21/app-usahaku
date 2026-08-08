@@ -27,7 +27,7 @@ type Props = {
 
 interface OptionsType {
     label: string;
-    value: number;
+    value: number | string; // [UPDATE] Ubah agar bisa menerima string kosong ('')
 }
 
 interface FormErrors {
@@ -90,7 +90,8 @@ const ProductFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
                     label: item.name,
                     value: item.id,
                 }));
-                setCategories(formatted);
+                // [UPDATE] Tambahkan opsi "Tanpa Kategori" di paling atas
+                setCategories([{ label: "-- Tidak Menggunakan Kategori --", value: "" }, ...formatted]);
             }
         } catch (e) {
             // console.error("Gagal mengambil kategori", e);
@@ -110,7 +111,7 @@ const ProductFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
             const mappedVariants: Variant[] = dataUpdate.variants?.map((v: any) => ({
                 name: v?.name || "",
                 price: v?.price ?? "",
-                cost: v?.cost ?? "", // [BARU] Load data modal varian
+                cost: v?.cost ?? "",
                 id: v?.id ?? 0,
                 image: null,
                 imagePreviewUrl: v?.image || null,
@@ -122,7 +123,7 @@ const ProductFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
                 name: dataUpdate.name,
                 description: dataUpdate.description,
                 price: dataUpdate.price,
-                cost: (dataUpdate as any).cost ?? "", // [BARU] Load data modal utama
+                cost: (dataUpdate as any).cost ?? "",
                 category: dataUpdate.product_category_id ?? null,
                 image: null,
                 imagePreviewUrl: dataUpdate.image,
@@ -136,7 +137,7 @@ const ProductFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
     }, [dataUpdate, isOpen]);
 
     // ==========================================
-    // HANDLERS: CROPPER (Dihilangkan untuk mempersingkat tampilan, kodenya sama persis)
+    // HANDLERS: CROPPER
     // ==========================================
     const handleFileChange = (e: ChangeEvent<HTMLInputElement>, targetVariantId: number | null) => {
         const file = e.target.files ? e.target.files[0] : null;
@@ -204,11 +205,14 @@ const ProductFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
     // ==========================================
     const handleProductChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
-        let newValue: string | number | boolean = value;
+        let newValue: any = value;
 
-        // [BARU] Custom formatting untuk price dan cost
+        // Custom formatting
         if (name === 'price' || name === 'cost') {
             newValue = value.replace(/[^0-9]/g, "");
+        } else if (name === 'category') {
+            // [UPDATE] Jika value string kosong, jadikan null
+            newValue = value === '' ? null : Number(value);
         } else if (type === 'number') {
             newValue = value === '' ? '' : Number(value);
         } else if (type === 'checkbox') {
@@ -227,7 +231,7 @@ const ProductFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
         setProductData(prev => ({
             ...prev,
             has_variant: newValue,
-            variants: newValue === 1 ? [{ name: '', price: '', cost: '', image: null, imagePreviewUrl: null, is_package: false }] : [] // [BARU] Tambah field cost kosong
+            variants: newValue === 1 ? [{ name: '', price: '', cost: '', image: null, imagePreviewUrl: null, is_package: false }] : []
         }));
         setError(prev => ({ ...prev, is_shared_stock: undefined }));
     };
@@ -239,7 +243,6 @@ const ProductFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
             const newVariants = [...prev.variants];
             const currentVariant = newVariants[index];
 
-            // [BARU] Custom formatting untuk price dan cost varian
             if (name === 'price' || name === 'cost') {
                 newVariants[index] = { ...currentVariant, [name]: value.replace(/[^0-9]/g, "") } as Variant;
             } else if (type === 'number') {
@@ -257,7 +260,7 @@ const ProductFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
     const addVariant = () => {
         setProductData(prev => ({
             ...prev,
-            variants: [...prev.variants, { name: '', price: '', cost: '', stock: '', image: null, imagePreviewUrl: null, is_package: false }], // [BARU] Tambah cost kosong
+            variants: [...prev.variants, { name: '', price: '', cost: '', stock: '', image: null, imagePreviewUrl: null, is_package: false }],
         }));
     };
 
@@ -314,12 +317,16 @@ const ProductFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
         const formData = new FormData();
         formData.append('name', productData.name);
         formData.append('description', productData.description ?? '');
-        if (productData.category) formData.append('product_category_id', String(productData.category));
+
+        // [UPDATE] Jika tidak ada kategori (null), kirim string kosong untuk menghapus relasi di backend
+        if (productData.category) {
+            formData.append('product_category_id', String(productData.category));
+        } else {
+            formData.append('product_category_id', '');
+        }
+
         formData.append('price', (productData.price === '' ? 0 : productData.price).toString());
-
-        // [BARU] Kirim data Harga Modal. Jika kosong, kirim 0.
         formData.append('cost', (productData.cost === '' || productData.cost === undefined ? 0 : productData.cost).toString());
-
         formData.append('has_variant', productData.has_variant.toString());
         formData.append('is_qty', productData.is_qty ? "1" : "0");
         formData.append('qrcode', productData.qrcode ?? '');
@@ -339,7 +346,6 @@ const ProductFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
                 const finalVariantPrice = variant.price ? variant.price : (productData.price || 0);
                 formData.append(`variants[${i}][price]`, String(finalVariantPrice));
 
-                // [BARU] Fallback cost varian. Jika kosong, ikuti cost produk utama.
                 const finalVariantCost = variant.cost ? variant.cost : (productData.cost || 0);
                 formData.append(`variants[${i}][cost]`, String(finalVariantCost));
 
@@ -365,7 +371,6 @@ const ProductFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
     return (
         <>
             {isCropping && imageToCrop ? (
-                // ... (Kode Cropper UI sama persis, saya potong komentar ini agar tidak kepanjangan)
                 <div className="inset-0 z-[100] h-[80vh] bg-zinc-900 flex flex-col rounded-2xl overflow-hidden shadow-2xl">
                     <div className="p-4 bg-zinc-800 text-white flex justify-between items-center shadow-md">
                         <span className="flex items-center gap-2 font-bold"><Scissors size={18} /> Potong Gambar</span>
@@ -429,7 +434,6 @@ const ProductFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
                                 <ScanBarcode size={20} className="absolute right-4 top-10 text-slate-400 pointer-events-none" />
                             </div>
 
-                            {/* [BARU] BIKIN GRID 2 KOLOM UNTUK HARGA JUAL & MODAL */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FormInput
                                     label="Harga Jual (Rp)"
@@ -453,7 +457,7 @@ const ProductFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
 
                             <FormInput
                                 type="autocomplete"
-                                label="Kategori"
+                                label="Kategori (Opsional)"
                                 name="category"
                                 value={productData.category ?? null}
                                 onChange={handleProductChange}
@@ -570,7 +574,6 @@ const ProductFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
                                                 required
                                             />
 
-                                            {/* [BARU] BIKIN GRID 2 KOLOM UNTUK HARGA JUAL & MODAL VARIAN */}
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <FormInput
                                                     label="Harga Jual Varian (Rp)"
@@ -612,7 +615,6 @@ const ProductFormModalContent = ({ isOpen, onClose, onSubmit, dataUpdate, loadin
                                                 />
                                             )}
 
-                                            {/* GAMBAR VARIAN */}
                                             <div className="flex flex-col space-y-2 mt-2">
                                                 <label htmlFor={`variant-image-${index}`} className="text-sm font-bold text-slate-700 flex items-center">
                                                     <ImageIcon size={16} className="mr-1.5 text-slate-400" /> Gambar Varian (Opsional)
