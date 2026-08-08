@@ -21,8 +21,8 @@ import ModalCrud from "@/Components/CRUD/ModalCrud";
 import Alert from "@/Components/Alert";
 import { formatImage } from "@/utils/formatImage";
 import ModalDetailQRCode from "../Components/ModalDetailQRCode";
-import ProductFormModalContent from "../../products/Components/ProductFormModalContent"; // Ganti ke ServiceFormModalContent jika ada
 import { Icon } from "@iconify/react";
+import ServiceFormModalContent from "../Components/ServiceFormModalContent";
 
 interface ProductResponse {
     data: ProductsType[];
@@ -452,7 +452,7 @@ export default function ServiceActive() {
                     title={dataUpdate ? "Edit Jasa" : "Tambah Jasa"}
                     onClose={handleCloseModal}
                 >
-                    <ProductFormModalContent
+                    <ServiceFormModalContent
                         isOpen={isModalOpen}
                         onClose={handleCloseModal}
                         onSubmit={handleFormSubmit}
