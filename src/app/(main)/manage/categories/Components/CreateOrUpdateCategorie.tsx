@@ -79,6 +79,7 @@ const CreateOrUpdateCategorie = ({ handleFormSubmit, data, loading, setLoading, 
                 color: data.color || "",
             });
 
+            // Pisahkan logika image (URL) dan Icon
             if (data.icon?.startsWith("http")) {
                 setPreviewImage(data.icon);
                 setIcon("");
@@ -103,7 +104,6 @@ const CreateOrUpdateCategorie = ({ handleFormSubmit, data, loading, setLoading, 
         const { name, value } = e.target;
         setForm((prev) => ({ ...prev, [name]: value }));
 
-        // Hapus pesan error saat user mengetik
         if (error[name as keyof FormErrors]) {
             setError((prev) => ({ ...prev, [name]: null }));
         }
@@ -119,7 +119,6 @@ const CreateOrUpdateCategorie = ({ handleFormSubmit, data, loading, setLoading, 
             };
             reader.readAsDataURL(file);
         }
-        // Reset input value agar bisa pilih file yang sama lagi jika dibatalkan
         e.target.value = '';
     };
 
@@ -133,13 +132,18 @@ const CreateOrUpdateCategorie = ({ handleFormSubmit, data, loading, setLoading, 
                 const croppedBlob = await getCroppedImg(imageToCrop, croppedAreaPixels);
                 const croppedFile = new File([croppedBlob], "category_image.jpg", { type: 'image/jpeg' });
 
-                // Hapus cache URL preview sebelumnya dari memori browser
                 if (previewImage && previewImage.startsWith("blob:")) {
                     URL.revokeObjectURL(previewImage);
                 }
 
                 setPreviewImage(URL.createObjectURL(croppedBlob));
                 setFileImage(croppedFile);
+
+                // 🔥 AUTO-CLEAR: Hapus Icon & Warnanya jika user mengunggah gambar
+                setIcon("");
+                setForm(prev => ({ ...prev, color: "" }));
+                setError(prev => ({ ...prev, color: null }));
+
                 setIsCropping(false);
                 setImageToCrop(null);
             }
@@ -160,13 +164,24 @@ const CreateOrUpdateCategorie = ({ handleFormSubmit, data, loading, setLoading, 
             hasError = true;
         }
 
+        // 🔥 VALIDASI: Tidak Boleh Kosong Keduanya
+        if (!icon && !fileImage && !previewImage) {
+            setAlert({
+                type: "error",
+                message: "Kategori wajib memiliki Icon ATAU Gambar (Pilih salah satu, tidak boleh kosong).",
+                isOpen: true,
+            });
+            hasError = true;
+        }
+
+        // 🔥 VALIDASI: Jaga-jaga jika ada bentrok state (meskipun sudah auto-clear)
         if (icon && (fileImage || previewImage)) {
             setAlert({
                 type: "error",
                 message: "Pilih salah satu: Gunakan Icon atau Gambar, tidak boleh keduanya.",
                 isOpen: true,
             });
-            return; // Berhenti langsung jika ada bentrok media
+            hasError = true;
         }
 
         if (icon && !form.color && !icon?.startsWith('usahaku')) {
@@ -258,16 +273,21 @@ const CreateOrUpdateCategorie = ({ handleFormSubmit, data, loading, setLoading, 
                     error={error.name ?? ''}
                 />
 
-                <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl space-y-4">
+                <div className={`bg-slate-50 border p-4 rounded-2xl space-y-4 transition-colors ${!icon && (previewImage || fileImage) ? 'border-slate-100 opacity-50' : 'border-emerald-100 bg-emerald-50/30'}`}>
                     <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Icon (Opsional)</label>
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Icon Kategori</label>
                         <IconAutocomplete
                             value={icon}
-                            onChange={(val) => setIcon(val)}
+                            onChange={(val) => {
+                                setIcon(val);
+                                // 🔥 AUTO-CLEAR: Hapus gambar jika user memilih Icon
+                                setPreviewImage("");
+                                setFileImage(null);
+                            }}
                             handleDelete={() => setIcon('')}
                         />
                         <p className="text-[11px] text-slate-400 font-medium">
-                            Ketik nama icon (cth: fa-solid:home). Jika menggunakan Icon, jangan unggah gambar.
+                            Jika Anda memilih Icon, gambar unggahan di bawah akan otomatis dibatalkan.
                         </p>
                     </div>
 
@@ -290,15 +310,15 @@ const CreateOrUpdateCategorie = ({ handleFormSubmit, data, loading, setLoading, 
                     <div className="border-t border-slate-300 w-full" />
                 </div>
 
-                <div className="flex flex-col space-y-2">
+                <div className={`flex flex-col space-y-2 p-4 rounded-2xl border transition-colors ${!previewImage && !fileImage && icon ? 'border-slate-100 opacity-50' : 'border-emerald-100 bg-emerald-50/30'}`}>
                     <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
-                        <ImageIcon size={18} className="text-slate-400" /> Gambar Kategori (Opsional)
+                        <ImageIcon size={18} className="text-slate-400" /> Gambar Kategori
                     </label>
                     <input
                         type="file"
                         onChange={handleFileChange}
                         accept="image/*"
-                        className="w-full p-2 border border-slate-200 rounded-xl bg-slate-50 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200 transition-all text-slate-600 text-sm cursor-pointer"
+                        className="w-full p-2 border border-slate-200 rounded-xl bg-white file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200 transition-all text-slate-600 text-sm cursor-pointer"
                     />
                     <ImagePreview
                         imageUrl={previewImage}
@@ -309,7 +329,7 @@ const CreateOrUpdateCategorie = ({ handleFormSubmit, data, loading, setLoading, 
                         }}
                     />
                     <p className="text-[11px] text-slate-400 font-medium">
-                        Unggah gambar berformat kotak (1:1). Jika menggunakan Gambar, kosongkan kolom Icon.
+                        Unggah gambar berformat kotak (1:1). Jika gambar diunggah, pilihan Icon akan otomatis dibatalkan.
                     </p>
                 </div>
 
