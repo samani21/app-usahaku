@@ -15,8 +15,8 @@ import Thirteen from './Thirteen';
 import { ProductsType, Variants } from '@/types/Admin/ProductsType';
 import { formatImage } from '@/utils/formatImage';
 import Seven from './Seven';
-import Fourteen from './Fourteen';
 import Fifteen from './Fifteen';
+import Fourteen from './Fourteen';
 
 type Props = {
     theme: number;
