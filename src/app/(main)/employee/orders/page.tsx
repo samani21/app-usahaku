@@ -51,6 +51,9 @@ const OrdersComponent = (props: Props) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [dateRangeText, setDateRangeText] = useState("");
 
+    // [BARU] State untuk menyimpan waktu update terakhir
+    const [lastFetchTime, setLastFetchTime] = useState<Date>(new Date());
+
     // Modal States
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [activeVerifyOrder, setActiveVerifyOrder] = useState<OrderType | null>(null);
@@ -61,6 +64,9 @@ const OrdersComponent = (props: Props) => {
     const [outlets, setOutlets] = useState<OutletsType[]>([]);
 
     const abortControllerRef = useRef<AbortController | null>(null);
+
+    // [BARU] Reference untuk menampung ID timer
+    const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     // Debounce Search Query
     useEffect(() => {
@@ -107,6 +113,11 @@ const OrdersComponent = (props: Props) => {
             if (selectedStatus !== 'all') params.append('status', selectedStatus);
             if (selectedOutlet !== 'all') params.append('outlet_id', selectedOutlet);
 
+            // Log saat refresh background berjalan
+            if (isBackground) {
+                console.log(`[Auto-Refresh Employee] Memperbarui data pada ${new Date().toLocaleTimeString()}...`);
+            }
+
             const res = await Get<{ success: boolean, data: dataType }>(
                 `employee/orders?${params.toString()}`,
                 { signal: controller.signal }
@@ -117,6 +128,8 @@ const OrdersComponent = (props: Props) => {
                 if (res?.data?.outlets?.length > 0) {
                     setOutlets(res.data.outlets);
                 }
+                // Update state jam terakhir sukses load
+                setLastFetchTime(new Date());
             } else {
                 addToast('Gagal memuat pesanan. Silakan muat ulang.', 'error');
             }
@@ -135,6 +148,34 @@ const OrdersComponent = (props: Props) => {
     useEffect(() => {
         getOrder();
     }, [getOrder]);
+
+    // --- AUTO REFRESH IDLE LOGIC ---
+    const resetIdleTimer = useCallback(() => {
+        if (idleTimerRef.current) {
+            clearTimeout(idleTimerRef.current);
+        }
+
+        // [TESTING] Diset 10 detik. Nanti ganti ke 180000 untuk 3 menit.
+        const IDLE_TIMEOUT_MS = 10000;
+
+        idleTimerRef.current = setTimeout(() => {
+            getOrder(true);
+            resetIdleTimer();
+        }, IDLE_TIMEOUT_MS);
+    }, [getOrder]);
+
+    useEffect(() => {
+        const events = ['mousemove', 'keydown', 'scroll', 'click', 'touchstart'];
+
+        resetIdleTimer();
+        events.forEach(event => window.addEventListener(event, resetIdleTimer));
+
+        return () => {
+            if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+            events.forEach(event => window.removeEventListener(event, resetIdleTimer));
+        };
+    }, [resetIdleTimer]);
+    // ---------------------------------
 
     const handleResetFilter = () => {
         setSearchQuery('');
@@ -337,23 +378,29 @@ const OrdersComponent = (props: Props) => {
                         </div>
 
                         {/* 4. Tombol Refresh & Reset Filter */}
-                        <div className="flex items-center gap-2 w-full">
-                            <button
-                                onClick={() => getOrder(false)}
-                                disabled={loading && !actionLoading}
-                                title="Refresh Data"
-                                className="flex-1 flex items-center justify-center gap-2 py-2.5 text-slate-600 hover:text-[#009662] bg-slate-50 hover:bg-[#009662]/10 rounded-xl transition-colors border border-slate-200 hover:border-[#009662]/30 disabled:opacity-50 text-xs font-semibold"
-                            >
-                                <RefreshCw size={16} className={loading && !actionLoading ? "animate-spin text-[#009662]" : ""} />
-                                <span>Muat Ulang</span>
-                            </button>
-                            <button
-                                onClick={handleResetFilter}
-                                title="Reset Filter"
-                                className="flex items-center justify-center px-4 py-2.5 text-slate-500 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors border border-slate-200"
-                            >
-                                <SlidersIcon size={16} />
-                            </button>
+                        <div className="flex flex-col items-end w-full">
+                            <div className="flex items-center gap-2 w-full">
+                                <button
+                                    onClick={() => getOrder(false)}
+                                    disabled={loading && !actionLoading}
+                                    title="Refresh Data"
+                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 text-slate-600 hover:text-[#009662] bg-slate-50 hover:bg-[#009662]/10 rounded-xl transition-colors border border-slate-200 hover:border-[#009662]/30 disabled:opacity-50 text-xs font-semibold"
+                                >
+                                    <RefreshCw size={16} className={loading && !actionLoading ? "animate-spin text-[#009662]" : ""} />
+                                    <span>Muat Ulang</span>
+                                </button>
+                                <button
+                                    onClick={handleResetFilter}
+                                    title="Reset Filter"
+                                    className="flex items-center justify-center px-4 py-2.5 text-slate-500 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors border border-slate-200"
+                                >
+                                    <SlidersIcon size={16} />
+                                </button>
+                            </div>
+                            {/* Indikator waktu update terakhir */}
+                            <p className="text-[10px] text-slate-400 font-medium mt-1.5 pr-1 truncate">
+                                Terakhir update: {lastFetchTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                            </p>
                         </div>
                     </div>
                 </div>
