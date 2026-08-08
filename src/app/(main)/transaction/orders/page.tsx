@@ -51,6 +51,9 @@ const OrdersComponent = (props: Props) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [dateRangeText, setDateRangeText] = useState("");
 
+    // [BARU] State untuk menyimpan waktu update terakhir
+    const [lastFetchTime, setLastFetchTime] = useState<Date>(new Date());
+
     // Modal States
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [activeVerifyOrder, setActiveVerifyOrder] = useState<OrderType | null>(null);
@@ -61,6 +64,9 @@ const OrdersComponent = (props: Props) => {
     const [outlets, setOutlets] = useState<OutletsType[]>([]);
 
     const abortControllerRef = useRef<AbortController | null>(null);
+
+    // Reference untuk menampung ID timer
+    const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     // Debounce Search Query
     useEffect(() => {
@@ -107,6 +113,10 @@ const OrdersComponent = (props: Props) => {
             if (selectedStatus !== 'all') params.append('status', selectedStatus);
             if (selectedOutlet !== 'all') params.append('outlet_id', selectedOutlet);
 
+            if (isBackground) {
+                console.log(`[Auto-Refresh] Memperbarui data pada ${new Date().toLocaleTimeString()}...`);
+            }
+
             const res = await Get<{ success: boolean, data: dataType }>(
                 `client/orders?${params.toString()}`,
                 { signal: controller.signal }
@@ -117,6 +127,8 @@ const OrdersComponent = (props: Props) => {
                 if (res?.data?.outlets?.length > 0) {
                     setOutlets(res.data.outlets);
                 }
+                // [BARU] Update state jam terakhir sukses load
+                setLastFetchTime(new Date());
             } else {
                 addToast('Gagal memuat pesanan. Silakan muat ulang.', 'error');
             }
@@ -136,11 +148,42 @@ const OrdersComponent = (props: Props) => {
         getOrder();
     }, [getOrder]);
 
+    // --- AUTO REFRESH IDLE LOGIC ---
+    const resetIdleTimer = useCallback(() => {
+        if (idleTimerRef.current) {
+            clearTimeout(idleTimerRef.current);
+        }
+
+        // [TESTING] Saya set ke 10 detik (10.000 ms). 
+        // Nanti silakan ubah ke 180000 untuk 3 menit.
+        const IDLE_TIMEOUT_MS = 10000;
+
+        idleTimerRef.current = setTimeout(() => {
+            // Ketika idle tercapai, panggil getOrder mode background
+            getOrder(true);
+            // Restart timer agar terus me-refresh selama masih idle
+            resetIdleTimer();
+        }, IDLE_TIMEOUT_MS);
+    }, [getOrder]);
+
+    useEffect(() => {
+        const events = ['mousemove', 'keydown', 'scroll', 'click', 'touchstart'];
+
+        resetIdleTimer();
+        events.forEach(event => window.addEventListener(event, resetIdleTimer));
+
+        return () => {
+            if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+            events.forEach(event => window.removeEventListener(event, resetIdleTimer));
+        };
+    }, [resetIdleTimer]);
+    // ---------------------------------
+
     const handleResetFilter = () => {
         setSearchQuery('');
         setSelectedStatus('all');
         setSelectedOutlet('all');
-        setDateRangeText(''); // Reset juga tanggalnya
+        setDateRangeText('');
         setCurrentPage(1);
     }
 
@@ -210,6 +253,7 @@ const OrdersComponent = (props: Props) => {
 
                 {/* --- METRICS CARDS --- */}
                 <div className="flex overflow-x-auto lg:grid lg:grid-cols-4 gap-4 pb-2 lg:pb-0 snap-x">
+                    {/* ... (Metrics Card tetap sama seperti kode sebelumnya) ... */}
                     <div className="min-w-[160px] snap-start bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-center shrink-0">
                         <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Total Pesanan</span>
                         <p className="text-2xl font-black text-slate-800 mt-1">{dataOrders?.summary?.count || 0}</p>
@@ -251,11 +295,9 @@ const OrdersComponent = (props: Props) => {
                     </div>
                 </div>
 
-                {/* --- TOOLBAR FILTERS & ACTIONS (RAPI & TERSTRUKTUR) --- */}
+                {/* --- TOOLBAR FILTERS & ACTIONS --- */}
                 <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                    {/* Baris Pertama: Search Bar & Tombol Aksi Utama (Scan & Order Baru) */}
                     <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
-                        {/* Search Input */}
                         <div className="relative w-full md:max-w-md">
                             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
                                 <SearchIcon size={18} />
@@ -269,7 +311,6 @@ const OrdersComponent = (props: Props) => {
                             />
                         </div>
 
-                        {/* Action Buttons (Scan & Order Baru) */}
                         <div className="flex items-center gap-2 w-full md:w-auto">
                             <button
                                 onClick={() => setIsOpenScan(true)}
@@ -288,9 +329,7 @@ const OrdersComponent = (props: Props) => {
                         </div>
                     </div>
 
-                    {/* Baris Kedua: Filter Kategori (Outlet, Tanggal, Status) & Tombol Refresh/Reset */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-slate-100">
-                        {/* 1. Filter Outlet Dinamis */}
                         <div className="relative w-full">
                             <select
                                 value={selectedOutlet}
@@ -305,7 +344,6 @@ const OrdersComponent = (props: Props) => {
                             <span className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">▼</span>
                         </div>
 
-                        {/* 2. Filter Rentang Tanggal */}
                         <div className="relative w-full">
                             <div className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none text-slate-400">
                                 <Calendar size={18} />
@@ -319,7 +357,6 @@ const OrdersComponent = (props: Props) => {
                             />
                         </div>
 
-                        {/* 3. Filter Status */}
                         <div className="relative w-full">
                             <select
                                 value={selectedStatus}
@@ -336,24 +373,30 @@ const OrdersComponent = (props: Props) => {
                             <span className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">▼</span>
                         </div>
 
-                        {/* 4. Tombol Refresh & Reset Filter */}
-                        <div className="flex items-center gap-2 w-full">
-                            <button
-                                onClick={() => getOrder(false)}
-                                disabled={loading && !actionLoading}
-                                title="Refresh Data"
-                                className="flex-1 flex items-center justify-center gap-2 py-2.5 text-slate-600 hover:text-[#009662] bg-slate-50 hover:bg-[#009662]/10 rounded-xl transition-colors border border-slate-200 hover:border-[#009662]/30 disabled:opacity-50 text-xs font-semibold"
-                            >
-                                <RefreshCw size={16} className={loading && !actionLoading ? "animate-spin text-[#009662]" : ""} />
-                                <span>Muat Ulang</span>
-                            </button>
-                            <button
-                                onClick={handleResetFilter}
-                                title="Reset Filter"
-                                className="flex items-center justify-center px-4 py-2.5 text-slate-500 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors border border-slate-200"
-                            >
-                                <SlidersIcon size={16} />
-                            </button>
+                        <div className="flex flex-col items-end w-full">
+                            <div className="flex items-center gap-2 w-full">
+                                <button
+                                    onClick={() => getOrder(false)}
+                                    disabled={loading && !actionLoading}
+                                    title="Refresh Data"
+                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 text-slate-600 hover:text-[#009662] bg-slate-50 hover:bg-[#009662]/10 rounded-xl transition-colors border border-slate-200 hover:border-[#009662]/30 disabled:opacity-50 text-xs font-semibold"
+                                >
+                                    <RefreshCw size={16} className={loading && !actionLoading ? "animate-spin text-[#009662]" : ""} />
+                                    <span>Muat Ulang</span>
+                                </button>
+                                <button
+                                    onClick={handleResetFilter}
+                                    title="Reset Filter"
+                                    className="flex items-center justify-center px-4 py-2.5 text-slate-500 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors border border-slate-200"
+                                >
+                                    <SlidersIcon size={16} />
+                                </button>
+                            </div>
+
+                            {/* [BARU] Indikator waktu update terakhir */}
+                            <p className="text-[10px] text-slate-400 font-medium mt-1.5 pr-1 truncate">
+                                Terakhir update: {lastFetchTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                            </p>
                         </div>
                     </div>
                 </div>
