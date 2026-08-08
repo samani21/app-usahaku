@@ -17,7 +17,7 @@ type Props = {
     handleCart?: (p: ProductsType | null, v: Variants | null, qty: number) => void;
 }
 
-const Fourteen = ({ products, isDarkMode, handleCart }: Props) => {
+const FourTen = ({ products, isDarkMode, handleCart }: Props) => {
     const [product, setProduct] = useState<ProductsType | null>(null);
     const [selectedVariant, setSelectedVariant] = useState<Variants | null>(null);
     const [quantity, setQuantity] = useState<number>(1);
@@ -378,4 +378,4 @@ const Fourteen = ({ products, isDarkMode, handleCart }: Props) => {
     );
 };
 
-export default Fourteen;
+export default FourTen;

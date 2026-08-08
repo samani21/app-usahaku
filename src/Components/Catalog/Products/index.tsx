@@ -12,11 +12,11 @@ import Ten from './Ten';
 import Eleven from './Eleven';
 import Twelve from './Twelve';
 import Thirteen from './Thirteen';
-import Fourteen from './Fourteen';
 import Fifteen from './Fifteen';
 
 import { ProductsType, Variants } from '@/types/Admin/ProductsType';
 import { formatImage } from '@/utils/formatImage';
+import FourTen from './FourTen';
 
 type Props = {
     theme: number;
@@ -34,7 +34,7 @@ type ThemeComponentProps = Omit<Props, 'theme' | 'dataProducts'> & {
 const ThemeMap: Record<number, React.FC<ThemeComponentProps>> = {
     1: One, 2: Two, 3: Three, 4: Four, 5: Five,
     6: Six, 7: Seven, 8: Eight, 9: Nine, 10: Ten,
-    11: Eleven, 12: Twelve, 13: Thirteen, 14: Fourteen, 15: Fifteen
+    11: Eleven, 12: Twelve, 13: Thirteen, 14: FourTen, 15: Fifteen
 };
 
 const ProductConfig = ({ theme, dataProducts, isDarkMode, handleCart }: Props) => {
@@ -42,14 +42,14 @@ const ProductConfig = ({ theme, dataProducts, isDarkMode, handleCart }: Props) =
     const products = (dataProducts || []).map((p) => ({
         ...p,
         image: formatImage(p.image) ?? '',
-        is_stock: !!p?.is_stock, 
-        
+        is_stock: !!p?.is_stock,
+
         // PERBAIKAN: Menghindari error "undefined > 0" di TypeScript Vercel
-        variants: p.variants && p.variants.length > 0 
+        variants: p.variants && p.variants.length > 0
             ? p.variants.map((v) => ({
                 ...v,
                 image: formatImage(v?.image ?? ''),
-            })) 
+            }))
             : []
     }));
 
