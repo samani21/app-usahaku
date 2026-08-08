@@ -129,6 +129,10 @@ export const menuSidebar: menuSide[] = [
                 label: 'Pengeluaran',
                 href: '/expenses'
             },
+            {
+                label: 'Keuangan',
+                href: '/finance'
+            },
         ]
     },
     {
