@@ -1,3 +1,4 @@
+import { BusinessType } from "../BusinessType";
 import { OutletsType } from "../OutletType";
 import { OrderItemType } from "./Item";
 
@@ -25,7 +26,8 @@ export interface OrderType {
     unique_code: string;
     slug?: string;
     items: OrderItemType[];
-    user: UserType
+    user: UserType;
+    business: BusinessType;
 }
 
 export interface UserType {

@@ -3,13 +3,16 @@ import { OrderType } from '@/types/Admin/Catalog/Order';
 import { Get } from '@/utils/Get';
 import {
     XIcon, User, MapPin, Receipt,
-    Wallet, Package, CheckCircle2, QrCode, AlertCircle
+    Wallet, Package, CheckCircle2, QrCode, AlertCircle,
+    Printer
 } from 'lucide-react';
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { QRCodeCanvas } from "qrcode.react";
 import { StatusOrder } from '@/types/StatusOrder';
 import { formatImage } from '@/utils/formatImage';
 import { Icon } from '@iconify/react';
+import { useReactToPrint } from 'react-to-print';
+import PrintOrder from './PrintOrder'; // Pastikan komponen ini menggunakan forwardRef
 
 type Props = {
     onClose: () => void;
@@ -18,8 +21,17 @@ type Props = {
 
 const ModalDetailOrder = ({ onClose, token }: Props) => {
     const [loading, setLoading] = useState<boolean>(false);
-    const [data, setData] = useState<OrderType>();
+    const [data, setData] = useState<OrderType | null>(null);
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+
+    // 1. Setup Ref untuk Komponen Print
+    const receiptRef = useRef<HTMLDivElement>(null);
+
+    // 2. Setup hook react-to-print (KODE BARU - FIX)
+    const handlePrint = useReactToPrint({
+        contentRef: receiptRef, // <-- Ubah 'content' menjadi 'contentRef'
+        documentTitle: `Struk_Pesanan_${data?.order_number || ''}`,
+    });
 
     const getOrder = async () => {
         setLoading(true);
@@ -79,7 +91,6 @@ const ModalDetailOrder = ({ onClose, token }: Props) => {
 
                 {/* Body Content */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6 relative">
-
                     {loading ? (
                         /* Loading Skeleton */
                         <div className="space-y-6 animate-pulse">
@@ -149,7 +160,6 @@ const ModalDetailOrder = ({ onClose, token }: Props) => {
                                     </div>
 
                                     <div className="pt-2 border-t border-slate-100 mt-3 space-y-2">
-                                        {/* Menampilkan Diskon & Harga Normal jika ada */}
                                         {Number(data?.discount_amount) > 0 && (
                                             <>
                                                 <div className="flex justify-between items-center px-1">
@@ -176,7 +186,7 @@ const ModalDetailOrder = ({ onClose, token }: Props) => {
                                     </div>
                                 </div>
 
-                                {/* QR Code (Kanan) - Logic Berubah di sini */}
+                                {/* QR Code (Kanan) */}
                                 <div className="w-full sm:w-auto flex flex-col items-center justify-center border-t sm:border-t-0 sm:border-l border-slate-100 pt-5 sm:pt-0 sm:pl-6">
                                     {isUnpaidNonCash ? (
                                         <>
@@ -279,17 +289,28 @@ const ModalDetailOrder = ({ onClose, token }: Props) => {
                     )}
                 </div>
 
-                {/* Footer */}
-                <div className="px-6 py-4 bg-white border-t border-slate-200 flex items-center justify-end shrink-0">
+                {/* Footer (Ditambahkan gap-3) */}
+                <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3 shrink-0 rounded-b-2xl">
+                    <button
+                        onClick={handlePrint}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 font-bold rounded-xl transition-colors shadow-sm"
+                    >
+                        <Printer size={18} />
+                        Cetak Struk
+                    </button>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="px-6 py-2.5 text-sm font-bold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors shadow-sm"
+                        className="px-6 py-2.5 text-sm font-bold text-slate-600 hover:text-slate-800 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl transition-colors shadow-sm"
                     >
                         Tutup Panel
                     </button>
                 </div>
+            </div>
 
+            {/* Area Khusus Render Struk */}
+            <div className="hidden">
+                <PrintOrder ref={receiptRef} data={data} />
             </div>
         </div>
     )
