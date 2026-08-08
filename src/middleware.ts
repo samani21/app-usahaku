@@ -1,49 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost";
+const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "usahaku.store";
 
 export function middleware(req: NextRequest) {
     const host = req.headers.get("host") || "";
     const hostname = host.split(":")[0];
     const url = req.nextUrl.clone();
 
-    // 1. Redirect (Mental) dari /super-admin/login ke /auth/login
-    // Diletakkan paling atas agar berlaku di root domain maupun subdomain
-    if (url.pathname.startsWith('/super-admin')) {
-        url.pathname = "/auth/login";
-        return NextResponse.redirect(url); // Gunakan redirect agar URL di browser ikut berubah
-    }
+    // Deteksi environment lokal (.localhost atau localhost) vs Production
+    const isLocal = hostname.endsWith(".localhost") || hostname === "localhost";
+    const baseDomain = isLocal ? "localhost" : ROOT_DOMAIN;
 
-    // 2. Abaikan IP Address (Biar aman saat testing lokal via IP network)
-    const isIpAddress = /^[0-9.]+$/.test(hostname);
-    if (isIpAddress) {
-        return NextResponse.next();
-    }
-
-    // 3. Logika Root Domain -> Main Store
-    // localhost murni atau store-usahaku.com berjalan normal
-    if (hostname === "localhost" || hostname === ROOT_DOMAIN) {
-        return NextResponse.next();
-    }
-
-    // 4. Logika Subdomain -> Tenant
-    // Menangkap subdomain (misal: namatoko.store-usahaku.com ATAU super-admin.localhost)
-    if (hostname.endsWith(`.${ROOT_DOMAIN}`) || hostname.endsWith(".localhost")) {
-        // Deteksi apakah sedang di local atau production
-        const isLocal = hostname.endsWith(".localhost");
-        const baseDomain = isLocal ? "localhost" : ROOT_DOMAIN;
-
-        // Ambil nama tenant (contoh: "super-admin" dari "super-admin.localhost")
-        const tenant = hostname.replace(`.${baseDomain}`, "");
-
-        // Jangan jadikan "www" sebagai nama tenant
-        if (tenant === "www") {
-            return NextResponse.next();
+    // 1. BLOKIR KETAT: Jika ada yang mencoba akses path /super-admin via domain utama atau app subdomain
+    if (url.pathname.startsWith("/super-admin")) {
+        // Jika diakses selain dari subdomain super-admin, tolak (Forbidden / 404)
+        if (hostname !== `super-admin.${baseDomain}` && hostname !== "super-admin.localhost") {
+            return new NextResponse("Forbidden", { status: 403 });
         }
+    }
 
-        // Rewrite URL ke folder /[tenant]
-        // Contoh: super-admin.localhost:3000 -> render /[tenant]/page.tsx (tenant = super-admin)
-        url.pathname = `/${tenant}${req.nextUrl.pathname}`;
+    // Ekstrak subdomain / tenant
+    let subdomain = "";
+    if (hostname.endsWith(`.${baseDomain}`)) {
+        subdomain = hostname.replace(`.${baseDomain}`, "");
+    } else if (isLocal && hostname !== "localhost") {
+        subdomain = hostname.replace(".localhost", "");
+    }
+
+    // 2. KONDISI: super-admin.usahaku.store
+    if (subdomain === "super-admin") {
+        // Rewrite ke folder /super-admin
+        url.pathname = `/super-admin${url.pathname}`;
+        return NextResponse.rewrite(url);
+    }
+
+    // 3. KONDISI: app.usahaku.store atau root domain (usahaku.store / www)
+    // Sesuai struktur foldermu, folder (main) menggunakan route group, 
+    // sehingga URL aslinya langsung diakses tanpa prefix tambahan.
+    if (subdomain === "app" || hostname === baseDomain || hostname === `www.${baseDomain}` || hostname === "localhost") {
+        return NextResponse.next();
+    }
+
+    // 4. KONDISI: Subdomain Tenant Toko Klien Lain (misal: namatoko.usahaku.store)
+    if (subdomain && subdomain !== "www") {
+        // Arahkan ke folder dynamic tenant kamu (misal: /sites/[tenant] atau /store/[tenant])
+        url.pathname = `/sites/${subdomain}${url.pathname}`;
         return NextResponse.rewrite(url);
     }
 
@@ -51,6 +52,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-    // Abaikan file statis dan internal Next.js agar middleware tidak kerja dua kali
-    matcher: ["/((?!_next|favicon.ico|api|images|public).*)"],
+    matcher: ["/((?!_next/static|_next/image|favicon.ico|api|images|public|sitemap.xml|robots.txt).*)"],
 };
